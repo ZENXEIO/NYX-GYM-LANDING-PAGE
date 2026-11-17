@@ -392,6 +392,16 @@
 }
 
 /* ─── Motion (CSS only; CLAUDE.md §4 Motion) ────────────────── */
+
+/* Motion gate (core/motion-gate.ts): sections far from the viewport drop their
+   animations, so the browser doesn't service them on every scroll frame. They
+   return a screen before the section can be seen. */
+.is-far,
+.is-far *,
+.is-far *::before,
+.is-far *::after {
+  animation: none !important;
+}
 @keyframes nyx-dusk {
   from {
     opacity: 0;
@@ -418,12 +428,23 @@
     stroke-dashoffset: 0;
   }
 }
+/* Wipes are a surface-coloured panel scaled away (transform runs on the GPU;
+   an animated clip-path repaints on every scroll frame). Overlays rest in
+   their finished state, so a section whose motion is paused (is-far) or
+   never runs still shows complete; keyframes give only the start. */
 @keyframes nyx-wipe {
   from {
-    clip-path: inset(16% 0 0 0);
+    transform: scaleY(1);
   }
-  to {
-    clip-path: inset(0);
+}
+@keyframes nyx-window {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes nyx-window-back {
+  from {
+    transform: translateX(100%);
   }
 }
 @keyframes nyx-marquee {
@@ -439,22 +460,16 @@
     transform: scaleX(1);
   }
 }
+/* A touch large, settling to size. (Animated letter-spacing re-laid out the
+   page on every scroll frame.) */
 @keyframes nyx-track {
   from {
     opacity: 0;
-    letter-spacing: 0.06em;
+    scale: 1.035;
   }
   to {
     opacity: 1;
-    letter-spacing: normal;
-  }
-}
-@keyframes nyx-arch-open {
-  from {
-    clip-path: inset(100% 0 0 0);
-  }
-  to {
-    clip-path: inset(0);
+    scale: 1;
   }
 }
 @keyframes nyx-arch-settle {
@@ -468,9 +483,6 @@
 @keyframes nyx-lights {
   from {
     opacity: 0.55;
-  }
-  to {
-    opacity: 0;
   }
 }
 @keyframes nyx-present {
@@ -574,8 +586,20 @@
        box and never move. Inner layers follow the outer frame's timeline. */
     .photo-reveal {
       view-timeline-name: --photo;
+    }
+    /* The top edge wipes upwards: a basalt band over the top 16%, scaled away. */
+    .photo-reveal::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      z-index: 1;
+      height: 16%;
+      background: var(--color-basalt);
+      transform-origin: top;
+      transform: scaleY(0);
+      pointer-events: none;
       animation: nyx-wipe linear both;
-      animation-timeline: view();
+      animation-timeline: --photo;
       animation-range: entry 0% entry 70%;
     }
     .photo-reveal .parallax {
@@ -611,8 +635,8 @@
       animation-range: entry 20% cover 40%;
     }
 
-    /* Tracking settles: single-line Bodoni (stat, tier names) arrives a touch
-       wide and settles to its resting spacing. Never on wrapping text. */
+    /* Single-line Bodoni (stat, tier names) arrives a touch large and
+       settles. Never on wrapping text. */
     .track-settle {
       animation: nyx-track linear both;
       animation-timeline: view();
@@ -625,14 +649,23 @@
       animation-range: entry 90% cover 50%;
     }
 
-    /* The arch opens from its base to its crown, the photo easing back. */
-    .arch-open .arch-frame {
-      animation: nyx-arch-open linear both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 45%;
-    }
+    /* The arch opens from its base to its crown, the photo easing back: a
+       plaster panel over the frame shrinks up towards the crown. */
     .arch-open {
       view-timeline-name: --arch;
+    }
+    .arch-open .arch-frame::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: var(--color-plaster);
+      transform-origin: top;
+      transform: scaleY(0);
+      pointer-events: none;
+      animation: nyx-wipe linear both;
+      animation-timeline: --arch;
+      animation-range: entry 0% cover 45%;
     }
     .arch-open .arch-frame img {
       animation: nyx-arch-settle linear both;
@@ -651,6 +684,7 @@
       position: absolute;
       inset: 0;
       background: var(--color-basalt);
+      opacity: 0;
       pointer-events: none;
       animation: nyx-lights linear both;
       animation-timeline: --photo;
@@ -669,16 +703,22 @@
       animation-timeline: view();
       animation-range: entry 0% cover 30%;
     }
-    .arc-scroll path {
-      stroke-dasharray: 1;
-      animation: nyx-draw linear both;
-      animation-timeline: view();
+    /* The arc is revealed from the left, line and lights together: its box
+       slides in with overflow clipped while the drawing slides back the same
+       distance, so it stays put. Two transforms on one timeline, so the GPU
+       does it (a dash-offset draw repainted the SVG on every scroll frame). */
+    .arc-scroll {
+      view-timeline-name: --arc;
+      overflow: hidden;
+    }
+    .arc-scroll,
+    .arc-scroll > svg {
+      animation: nyx-window linear both;
+      animation-timeline: --arc;
       animation-range: entry 30% cover 35%;
     }
-    .arc-scroll circle {
-      animation: nyx-dusk linear both;
-      animation-timeline: view();
-      animation-range: cover 30% cover 40%;
+    .arc-scroll > svg {
+      animation-name: nyx-window-back;
     }
     /* Eclipse only: the inner frame traces itself, like a seal pressed. */
     .frame-seal rect {

@@ -24,7 +24,7 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
 @Component({
   selector: 'nyx-arc',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block text-accent' },
+  host: { class: 'block text-accent', '[class.arc-scroll]': 'scroll()' },
   template: `
     <svg
       viewBox="0 0 120 40"
@@ -32,7 +32,6 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
       aria-hidden="true"
       class="block h-auto w-full"
       [class.arc-draw]="draw()"
-      [class.arc-scroll]="scroll()"
     >
       <path
         d="M2 36 Q60 -10 118 36"
@@ -50,7 +49,7 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
 export class Arc {
   /** Draw the line once, when it appears (the tour form's success message). */
   readonly draw = input(false);
-  /** Draw the line as the arc scrolls into view (membership invitations). */
+  /** Reveal the arc from the left as it scrolls into view (membership invitations). */
   readonly scroll = input(false);
   protected readonly lights = LIGHTS;
 }

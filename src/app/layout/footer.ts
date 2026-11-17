@@ -14,14 +14,15 @@ import { Arc } from '../shared/arc';
 import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
 
 /**
- * Footer with the closing moment (CLAUDE.md §4, element 7): as the footer
- * scrolls in, the Queen's Necklace draws itself towards a bronze button and its
- * lights come on one by one; once it closes, the sign-off writes itself in.
+ * Footer with the closing moment (CLAUDE.md §4): as the footer scrolls in, the
+ * Queen's Necklace, hung from the footer's top hairline, draws itself in from
+ * both edges and its lights come on one by one towards the middle, where the
+ * halves meet at a bronze pendant button. Then the sign-off writes itself in.
  * Pressing the button slides an invitation card up from behind the footer.
  *
- * The scroll part is CSS only: a view timeline animates `--p` from 0 to 1 and
- * everything reads from it. Without scroll timelines, or with reduced motion,
- * `--p` stays at 1 and the footer shows complete.
+ * The scroll part is CSS only: each piece animates its own opacity or
+ * transform on the necklace's view timeline. Without scroll timelines, or with
+ * reduced motion, the footer shows complete.
  */
 @Component({
   selector: 'nyx-footer',
@@ -32,12 +33,9 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
       <!-- The closing moment -->
       <div class="necklace border-line border-t">
         <div class="site-container">
-          <div class="stage relative h-[28rem] md:h-[34rem]">
-            <p class="sign-off text-h2 text-plaster max-w-[11ch] pt-20 md:pt-32">
-              {{ f.signOff }}
-            </p>
-
-            <div class="absolute inset-x-0 bottom-0">
+          <div class="stage relative pb-44 md:pb-[13.5rem] lg:pb-48">
+            <!-- Hung from the hairline: the drawing's top edge is the border. -->
+            <div class="relative">
               @for (n of necklaces; track n.viewBox) {
                 <svg
                   [attr.viewBox]="n.viewBox"
@@ -46,14 +44,16 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                   class="drawing block h-auto w-full overflow-visible"
                   [class]="n === wide ? 'hidden md:block' : 'md:hidden'"
                 >
-                  <path
-                    class="necklace-line"
-                    [attr.d]="n.d"
-                    pathLength="1"
-                    stroke="currentColor"
-                    stroke-width="1"
-                    vector-effect="non-scaling-stroke"
-                  />
+                  @for (d of n.paths; track $index) {
+                    <path
+                      class="necklace-line"
+                      [attr.d]="d"
+                      pathLength="1"
+                      stroke="currentColor"
+                      stroke-width="1"
+                      vector-effect="non-scaling-stroke"
+                    />
+                  }
                   @for (l of n.lights; track $index) {
                     <circle
                       class="lamp"
@@ -66,7 +66,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                 </svg>
               }
 
-              <!-- The clasp: where the necklace ends -->
+              <!-- The pendant: where the two halves meet -->
               <div
                 class="clasp absolute z-20"
                 [style.--nx]="narrow.end.left"
@@ -74,9 +74,6 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                 [style.--wx]="wide.end.left"
                 [style.--wy]="wide.end.top"
               >
-                <span class="clasp-label text-label text-plaster-muted" aria-hidden="true">{{
-                  f.invitation.label
-                }}</span>
                 <button
                   #clasp
                   type="button"
@@ -96,8 +93,17 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                     <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.2" />
                   </svg>
                 </button>
+                <span class="clasp-label text-label text-plaster-muted" aria-hidden="true">{{
+                  f.invitation.label
+                }}</span>
               </div>
             </div>
+
+            <p
+              class="sign-off text-h2 text-plaster mx-auto mt-28 max-w-[14ch] text-center md:mt-32"
+            >
+              {{ f.signOff }}
+            </p>
 
             <!-- The invitation, tucked behind the footer until opened -->
             <div
@@ -210,58 +216,97 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
     </footer>
   `,
   styles: `
-    /* --p: how far the necklace has closed, 0 to 1. Complete by default. */
-    @property --p {
-      syntax: '<number>';
-      inherits: true;
-      initial-value: 1;
-    }
+    /* Scroll-linked, part by part. Every piece animates its own opacity or
+       transform on the necklace's view timeline, where the moment runs from
+       cover 5% to cover 50% ("p" 0 to 1 below): the halves draw over p 0–0.85,
+       each lamp lights as the line reaches it, and the sign-off, the
+       pendant's brighter ring, its label and the card's peek arrive over
+       p 0.75–1. (One inherited --p used to restyle the whole footer on every
+       scroll frame.) Without scroll timelines, or with reduced motion,
+       nothing animates and the footer shows complete. */
     @supports (animation-timeline: view()) {
       @media (prefers-reduced-motion: no-preference) {
         .necklace {
-          animation: necklace-close linear both;
-          animation-timeline: view();
-          animation-range: entry 10% cover 50%;
+          view-timeline-name: --necklace;
+        }
+        .necklace-line,
+        .lamp,
+        .sign-off::after,
+        .clasp-btn::after,
+        .clasp-label,
+        .card {
+          animation: fade-in linear both;
+          animation-timeline: --necklace;
+          animation-range: cover 38.75% cover 50%;
+        }
+        .necklace-line {
+          stroke-dasharray: 1;
+          animation-name: line-draw;
+          animation-range: cover 5% cover 43.25%;
+        }
+        /* p = 0.85 × at, so cover 5% + 38.25% × at. */
+        .lamp {
+          animation-name: lamp-on;
+          animation-range: cover calc(5% + 38.25% * var(--at)) cover calc(7.4% + 38.25% * var(--at));
+        }
+        /* Written in from the left: a basalt panel slides off to the right. */
+        .sign-off::after {
+          content: '';
+          position: absolute;
+          inset: -0.15em -0.1em;
+          background: var(--color-basalt);
+          transform-origin: right;
+          transform: scaleX(0);
+          animation-name: sign-wipe;
+        }
+        .card {
+          animation-name: card-peek;
         }
       }
     }
-    @keyframes necklace-close {
+    /* Only start states: each ends on the element's resting (complete) style. */
+    @keyframes line-draw {
       from {
-        --p: 0;
-      }
-      to {
-        --p: 1;
+        stroke-dashoffset: 1;
       }
     }
-    .necklace {
-      /* The line draws over the first 85%; the sign-off writes in over the last 25%. */
-      --draw: clamp(0, var(--p) / 0.85, 1);
-      --sign: clamp(0, (var(--p) - 0.75) / 0.25, 1);
+    @keyframes lamp-on {
+      from {
+        opacity: 0.12;
+      }
+    }
+    @keyframes sign-wipe {
+      from {
+        transform: none;
+      }
+    }
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+      }
+    }
+    @keyframes card-peek {
+      from {
+        transform: translateY(22px);
+      }
     }
 
     .drawing {
       color: var(--color-bronze);
       transition: opacity 900ms var(--ease-calm);
     }
-    .necklace-line {
-      stroke-dasharray: 1;
-      stroke-dashoffset: calc(1 - var(--draw));
-    }
-    /* Each streetlight comes on as the line reaches it. */
     .lamp {
       fill: var(--color-bronze-light);
-      opacity: clamp(0.12, (var(--draw) - var(--at)) * 14 + 0.12, 1);
     }
-
     .sign-off {
-      clip-path: inset(-20% calc((1 - var(--sign)) * 100%) -20% 0);
+      position: relative;
     }
 
-    /* Sits on the end of the curve: percentages of the drawing's box. */
+    /* Hangs from the lowest point: its top centre is where the halves meet. */
     .clasp {
       left: var(--nx);
       top: var(--ny);
-      translate: -50% -50%;
+      translate: -50% 0;
     }
     @media (min-width: 768px) {
       .clasp {
@@ -271,20 +316,22 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
     }
     .clasp-btn {
       position: relative;
-      /* Brightens once the necklace has closed. */
-      border-color: color-mix(
-        in srgb,
-        var(--color-bronze-light) calc(var(--sign) * 100%),
-        var(--color-bronze)
-      );
+    }
+    /* A brighter ring over the bronze one: it fades in as the necklace closes. */
+    .clasp-btn::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border: 1px solid var(--color-bronze-light);
+      border-radius: 9999px;
+      pointer-events: none;
     }
     .clasp-label {
       position: absolute;
-      right: calc(100% + 16px);
-      top: 50%;
-      translate: 0 -50%;
+      left: 50%;
+      top: calc(100% + 14px);
+      translate: -50% 0;
       white-space: nowrap;
-      opacity: var(--sign);
       transition: opacity 900ms var(--ease-calm);
     }
     .clasp-icon {
@@ -292,17 +339,18 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
     }
 
     /* The card: hidden behind the contact panel; its top edge peeks out once
-       the necklace has closed; slides fully up when opened. */
+       the necklace has closed (a transform, animated above); slides fully up
+       when opened (translate, a separate property). */
     .card {
       inset-inline: 0;
-      translate: 0 calc(100% - 22px * var(--sign));
+      translate: 0 calc(100% - 22px);
       transition: translate 1100ms var(--ease-calm);
     }
     @media (min-width: 768px) {
-      /* Beside the clasp, never under it. */
+      /* Centred under the pendant. */
       .card {
-        inset-inline: auto 5.5rem;
         width: 34rem;
+        margin-inline: auto;
       }
     }
     .card:focus {
@@ -315,7 +363,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
         opacity 900ms var(--ease-calm),
         visibility 0s;
     }
-    /* Phones: the open card fills the stage, so the clasp steps aside; the
+    /* Phones: the open card covers the pendant, so it steps aside; the
        card's own Close button takes over. */
     @media (max-width: 767.98px) {
       .is-open .clasp {
@@ -339,8 +387,9 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
     .is-open .clasp-icon {
       rotate: 45deg;
     }
+    /* Important beats the scroll animation's opacity. */
     .is-open .clasp-label {
-      opacity: 0;
+      opacity: 0 !important;
     }
     @media (prefers-reduced-motion: reduce) {
       .card,

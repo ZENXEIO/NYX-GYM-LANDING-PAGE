@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, afterNextRender, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  afterNextRender,
+  inject,
+} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AnalyticsService } from './core/analytics.service';
 import { Footer } from './layout/footer';
@@ -20,7 +26,14 @@ import { Header } from './layout/header';
 export class App {
   constructor() {
     const analytics = inject(AnalyticsService);
-    afterNextRender(() => analytics.start());
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      analytics.start();
+      // Its own small chunk: not needed for first paint.
+      import('./core/motion-gate').then(({ startMotionGate }) =>
+        destroyRef.onDestroy(startMotionGate()),
+      );
+    });
   }
 
   /** Same-page skip that works on every route (no full navigation to '/#main'). */

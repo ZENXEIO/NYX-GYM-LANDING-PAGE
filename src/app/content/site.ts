@@ -4,7 +4,7 @@
  * (e.g. '/images/hero' → /images/hero-1600.webp). Leave `src` empty
  * to show a labelled placeholder.
  *
- * SAMPLE CONTENT (17 Nov 2026): the address, coaches, member quotes and legal
+ * SAMPLE CONTENT (17 Nov 2026): the address, facility floors, coaches, member quotes, partner and press names and legal
  * text were written to make the site feel real before launch. They are not
  * real. Replace them with approved details before going live; member quotes in
  * particular must come from real members, with their consent (CLAUDE.md §17).
@@ -27,6 +27,8 @@ export interface SiteImage {
 export interface Facility {
   id: string;
   name: string;
+  /** Where it is in the club, shown in the floor directory (SAMPLE until the real layout is known). */
+  where: string;
   lines: [string, string];
   image: SiteImage;
 }
@@ -48,9 +50,11 @@ export interface Testimonial {
 
 /** A partner or press logo for the slider under the quotes. */
 export interface Partner {
-  /** Partner name: the logo's alt text. Empty while it is a placeholder. */
+  /** Name, shown as a text wordmark until a logo is supplied; then the logo's alt text. */
   name: string;
-  /** Path to a one-colour SVG in public/images/partners/. Empty = labelled placeholder. */
+  /** A brand partner (Archivo wordmark) or a publication (Bodoni masthead). */
+  kind: 'partner' | 'press';
+  /** Path to a one-colour SVG in public/images/partners/. Empty = text wordmark. */
   logo: string;
 }
 
@@ -167,10 +171,13 @@ export const site = {
   facilities: {
     heading: 'Room to train. Room to recover.',
     intro: 'Six spaces, each with one purpose, and none of them crowded.',
+    /** Accessible name of the floor directory beside the rooms. */
+    directoryLabel: 'Rooms',
     items: [
       {
         id: 'strength',
         name: 'Strength floor',
+        where: 'Level 3',
         lines: ['Racks, platforms and room to move.', 'Nobody waiting on your bench.'],
         image: {
           src: '/images/strength',
@@ -182,6 +189,7 @@ export const site = {
       {
         id: 'recovery',
         name: 'Recovery suite',
+        where: 'Level 4',
         lines: ['Cold plunge, compression and massage.', 'The work that makes the work count.'],
         image: {
           src: '/images/recovery',
@@ -193,6 +201,7 @@ export const site = {
       {
         id: 'sauna',
         name: 'Sauna and steam',
+        where: 'Level 4',
         lines: ['Cedar heat and eucalyptus steam.', 'Ten minutes that settle the whole day.'],
         image: {
           src: '/images/sauna',
@@ -204,6 +213,7 @@ export const site = {
       {
         id: 'pool',
         name: 'Pool',
+        where: 'Level 5, rooftop',
         lines: ['Twenty-five metres, lit low.', 'Swim before the city wakes.'],
         image: {
           src: '/images/pool',
@@ -215,6 +225,7 @@ export const site = {
       {
         id: 'studio',
         name: 'Studio',
+        where: 'Level 3',
         lines: [
           'Small classes, a sprung floor, soft light.',
           'Mobility, Pilates and conditioning.',
@@ -229,6 +240,7 @@ export const site = {
       {
         id: 'lounge',
         name: 'Lounge',
+        where: 'Level 5',
         lines: ['Coffee, cold-pressed juice and quiet.', 'Stay as long as you like.'],
         image: {
           src: '/images/lounge',
@@ -384,19 +396,20 @@ export const site = {
     quotesLabel: 'Member quotes',
     partners: {
       heading: 'Partners and press',
-      placeholder: 'Logo placeholder',
-      spec: 'SVG, one colour',
       /**
-       * PLACEHOLDERS: supply real partner and press logos (SVG, one colour), with
-       * permission to use them. Never invent brand names: it implies an endorsement.
+       * SAMPLE names, deliberately fictional: not real brands or publications.
+       * Before launch replace them with real partners and real press coverage,
+       * with permission, plus their logos (SVG, one colour). Never put a real
+       * brand's name here unless the relationship is real: it implies an
+       * endorsement or coverage that does not exist.
        */
       items: [
-        { name: '', logo: '' },
-        { name: '', logo: '' },
-        { name: '', logo: '' },
-        { name: '', logo: '' },
-        { name: '', logo: '' },
-        { name: '', logo: '' },
+        { name: 'Saltwick Recovery', kind: 'partner', logo: '' },
+        { name: 'Monsoon Quarterly', kind: 'press', logo: '' },
+        { name: 'Kestrel & Vane', kind: 'partner', logo: '' },
+        { name: 'The Coastline Review', kind: 'press', logo: '' },
+        { name: 'Ondra Cold Therapy', kind: 'partner', logo: '' },
+        { name: 'Meridian Weekend', kind: 'press', logo: '' },
       ] satisfies Partner[],
     },
   },
@@ -447,7 +460,7 @@ export const site = {
   footer: {
     tagline: 'A private fitness club in Worli. Open until midnight.',
     /** Writes itself in once the necklace of lights has closed (scroll-linked). */
-    signOff: 'See you after dark.',
+    signOff: 'Tap into a newer you.',
     /** The card that slides out of the footer when the bronze button is pressed. */
     invitation: {
       label: 'Your invitation',

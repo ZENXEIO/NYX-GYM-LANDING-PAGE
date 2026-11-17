@@ -83,12 +83,10 @@ import { site } from '../../../content/site';
                       decoding="async"
                     />
                   } @else {
-                    <span
-                      class="border-line text-label text-plaster-muted flex h-16 w-44 flex-col items-center justify-center border text-center"
-                    >
-                      <span class="text-accent">{{ t.partners.placeholder }}</span>
-                      <span class="mt-1 text-[0.625rem]">{{ t.partners.spec }}</span>
-                    </span>
+                    <!-- Until a logo is supplied: the name, set as a wordmark. -->
+                    <span class="wordmark-text flex h-16 items-center" [class]="'is-' + p.kind">{{
+                      p.name
+                    }}</span>
                   }
                 </li>
               }
@@ -107,6 +105,23 @@ import { site } from '../../../content/site';
     }
     .partner-logo:hover {
       opacity: 1;
+    }
+    /* Text wordmarks, in the same quiet strength as the logos will be. */
+    .wordmark-text {
+      color: var(--color-plaster);
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+    .is-partner {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      font-stretch: 125%;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+    .is-press {
+      font-family: var(--font-serif);
+      font-size: 1.625rem;
     }
   `,
 })
