@@ -12,13 +12,10 @@ lives in [`CLAUDE.md`](CLAUDE.md).
 npm install
 npm start            # dev server: http://localhost:4200
 npm run build        # production build → dist/nyx/browser (static files)
-npm test             # unit tests (Vitest)
-npm run test:scripts # build-script tests (node --test)
-npm run e2e          # Playwright + axe against a production build
 npm run lint         # ESLint
 ```
 
-The full test plan is in [`TESTING.md`](TESTING.md).
+There are no automated tests or CI pipeline (see `CLAUDE.md` §14).
 
 To preview the production build locally:
 
@@ -49,22 +46,27 @@ Hero video (optional): add `public/media/hero.mp4` and `public/media/hero.webm`,
 then set `hero.video: '/media/hero'` in `site.ts`. It plays only on wide screens
 when the visitor hasn't asked for reduced motion.
 
-## Configuration (`.env`)
+## Configuration
 
-Copy `.env.example` to `.env` and fill it in. `scripts/set-env.mjs` turns it into
-`src/environments/*.ts` before every start, build, test and lint, so **don't edit
-those generated files**. On the host (Cloudflare Pages, GitHub Actions), set the
-same names as environment variables instead; they override `.env`.
+All public settings are in `src/environments/config.ts`. Edit that file by hand;
+there is no `.env` file and nothing is generated at build time.
 
-| Variable | What it does |
+| Setting | What it does |
 |---|---|
-| `NYX_SITE_URL` | Real domain: canonical URLs, social previews, sitemap, robots.txt, JSON-LD. |
-| `NYX_TOUR_ENDPOINT` | URL the form POSTs to. Empty = demo success in dev, phone/WhatsApp fallback in production. Its origin is added to the CSP `connect-src` automatically. |
-| `NYX_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (anti-bot). Empty = off. |
-| `NYX_CF_ANALYTICS_TOKEN` | Cloudflare Web Analytics token (cookieless; includes Core Web Vitals). Empty = off. |
-| `NYX_PHONE`, `NYX_PHONE_DISPLAY`, `NYX_EMAIL`, `NYX_INSTAGRAM_URL` | Contact details shown across the site. |
+| `siteUrl` | Real domain: canonical URLs and social previews. |
+| `tourEndpoint` | URL the form POSTs to. Empty = demo success in dev, phone/WhatsApp fallback in production. |
+| `turnstileSiteKey` | Cloudflare Turnstile site key (anti-bot). Empty = off. |
+| `cfAnalyticsToken` | Cloudflare Web Analytics token (cookieless; includes Core Web Vitals). Empty = off. |
+| `contact` | Phone, email and Instagram shown across the site. |
 
-Everything here ends up in the browser bundle: never put secrets in `.env`.
+Two things to change by hand alongside it:
+
+- **Site URL and phone** are also written in `src/index.html` (JSON-LD),
+  `public/robots.txt` and `public/sitemap.xml`.
+- **Form endpoint:** add its origin to `connect-src` in `public/_headers`, or
+  the browser blocks the request.
+
+Everything in `config.ts` ends up in the browser bundle: never put secrets in it.
 The request/response contract the form endpoint must follow is in `CLAUDE.md` §10.
 
 ## Deploy (Cloudflare Pages)
@@ -76,10 +78,8 @@ The request/response contract the form endpoint must follow is in `CLAUDE.md` §
 `scripts/csp-hashes.mjs` adds hashes for Angular's inline scripts to the
 Content-Security-Policy, so no `'unsafe-inline'` is needed for scripts.
 
-`%NYX_SITE_URL%` and `%NYX_PHONE%` in `src/index.html`, `public/robots.txt` and
-`public/sitemap.xml` are filled from the configuration after each build.
-Production builds refuse placeholder values (such as `nyx.example`) when
-`CI=true` or `NYX_STRICT=true`, and `npm run verify:dist` checks the output.
+Before deploying, run `npm run verify:dist`. It fails while placeholder values
+(such as `nyx.example`) are still in the output.
 
 ## Fonts
 

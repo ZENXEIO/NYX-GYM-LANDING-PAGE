@@ -43,16 +43,16 @@
           U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
       }
     </style>
-    <!-- URL and phone are filled from .env at build (scripts/inject-dist.mjs). PLACEHOLDER: address and geo -->
+    <!-- PLACEHOLDER: URL, phone, address and geo. Keep URL and phone in step with src/environments/config.ts -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "HealthClub",
         "name": "NYX",
         "description": "A private fitness club in Worli, Mumbai.",
-        "url": "%NYX_SITE_URL%/",
-        "image": "%NYX_SITE_URL%/og.png",
-        "telephone": "%NYX_PHONE%",
+        "url": "https://nyx.example/",
+        "image": "https://nyx.example/og.png",
+        "telephone": "+910000000000",
         "priceRange": "₹₹₹₹",
         "address": {
           "@type": "PostalAddress",

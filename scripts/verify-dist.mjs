@@ -1,4 +1,4 @@
-// CI gate: fail if the production output in dist/ is not safe to deploy.
+// Pre-deploy check: fail if the production output in dist/ is not safe to deploy.
 // Runs after `npm run build`. Exits 1 with a list of problems.
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -25,10 +25,9 @@ for (const route of ['index.html', 'privacy/index.html', 'terms/index.html']) {
   if (!existsSync(join(out, route))) fail(`missing prerendered route: ${route}`);
 }
 
-// 2. No unfilled build tokens, placeholder domains, localhost or source maps.
+// 2. No placeholder domains, localhost or source maps.
 for (const f of text) {
   const s = readFileSync(f, 'utf8');
-  if (s.includes('%NYX_')) fail(`unfilled %NYX_ token in ${f}`);
   if (/nyx\.example/.test(s)) fail(`placeholder domain nyx.example in ${f}`);
   if (/https?:\/\/localhost[:/]/.test(s)) fail(`localhost URL in ${f}`);
   if (/\.js$/.test(f) && /^\/\/# sourceMappingURL=/m.test(s)) fail(`source map reference in ${f}`);

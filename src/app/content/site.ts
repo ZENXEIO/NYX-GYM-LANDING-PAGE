@@ -66,7 +66,7 @@ export const site = {
     close: 'Close',
   },
 
-  /** Phone, email and Instagram come from .env (NYX_*). PLACEHOLDER: address. */
+  /** Phone, email and Instagram come from src/environments/config.ts. PLACEHOLDER: address. */
   contact: {
     placeholder: true,
     addressLines: ['Level 12, Placeholder Tower', 'Dr Annie Besant Road', 'Worli, Mumbai 400018'],

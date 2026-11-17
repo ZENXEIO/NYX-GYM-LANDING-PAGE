@@ -43,11 +43,9 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Environment (generated from .env by scripts/set-env.mjs)
+# Never commit env files; config is static in src/environments/
 .env
 .env.*
-!.env.example
-/src/environments/environment*.ts
 
 # Test output
 /test-results
