@@ -83,7 +83,7 @@ jobs:
       - run: npm run test:coverage
       # Build scripts: env checks, token filling, CSP hashes.
       - run: npm run test:scripts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage
@@ -163,7 +163,7 @@ jobs:
       # tokens and writes CSP hashes.
       - run: npm run build
       - run: npm run verify:dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: site
           path: dist/nyx/browser
@@ -187,7 +187,7 @@ jobs:
       # intercepts, so no request reaches the real form service.
       - run: npm run e2e:build
       - run: npx playwright test --grep-invert @visual
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -211,7 +211,7 @@ jobs:
           path: dist/nyx/browser
       # Budgets from CLAUDE.md §8, asserted in lighthouserc.json.
       - run: npm run lhci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lighthouse
