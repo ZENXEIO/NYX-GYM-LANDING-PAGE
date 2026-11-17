@@ -1,177 +1,167 @@
-# NYX — website
+# NYX
 
-Marketing site for NYX, a private fitness club in Worli, Mumbai. Its job is to
-book private tours and collect membership enquiries.
-Angular + Tailwind CSS v4, prerendered to static HTML and served from a CDN.
+NYX is a premium private fitness club in Worli, Mumbai. The site exists to book private tours and collect membership enquiries for a calm, high-end club experience.
 
-The full spec (design system, architecture, motion, performance and
-accessibility rules, decisions log) lives in [`CLAUDE.md`](CLAUDE.md). Read it
-before changing anything.
+This repository contains the Angular marketing site for NYX. It is a static, prerendered front end built with Angular and Tailwind CSS, designed to feel like a quiet luxury members' club rather than a conventional gym website.
 
-## Run it
+The full implementation and product spec live in [CLAUDE.md](CLAUDE.md). Read that first before making design or content changes.
+
+## Stack
+
+- Angular 22
+- Tailwind CSS v4
+- Static prerendering (no server runtime)
+- Cloudflare Pages-friendly deployment
+- Self-hosted fonts
+- CSS-only motion and scroll-driven animation
+
+## Quick start
 
 ```bash
 npm install
-npm start            # dev server: http://localhost:4200
-npm run build        # production build → dist/nyx/browser (static files)
+npm start
 ```
 
-| Command                | What it does                                                       |
-| ---------------------- | ------------------------------------------------------------------ |
-| `npm start`            | Dev server on http://localhost:4200                                |
-| `npm run build`        | Production build, prerendered; then adds CSP hashes to `_headers`  |
-| `npm run lint`         | ESLint (angular-eslint)                                            |
-| `npm run format`       | Prettier, with Tailwind class sorting                              |
-| `npm run format:check` | Prettier check without writing                                     |
-| `npm run images`       | Turns originals in `sources/assets/` into WebP in `public/images/` |
-| `npm run verify:dist`  | Checks the build output is safe to deploy (run after a build)      |
+Open http://localhost:4200
 
-There are no automated tests or CI pipeline (see `CLAUDE.md` §14). Before each
-release, check by hand in a browser: 375, 768 and 1440px wide, keyboard only,
-and with reduced motion turned on.
+## Commands
 
-To preview the production build locally:
+| Command | Purpose |
+| --- | --- |
+| `npm start` | Start the Angular dev server on http://localhost:4200 |
+| `npm run build` | Production build; output is `dist/nyx/browser` |
+| `npm run lint` | Run Angular ESLint checks |
+| `npm run format` | Format source files with Prettier and Tailwind sorting |
+| `npm run format:check` | Check formatting without writing files |
+| `npm run images` | Generate optimised WebP images for originals in `sources/assets/` |
+| `npm run verify:dist` | Validate the production output before deployment |
 
-```bash
-npx serve dist/nyx/browser
+## Project structure
+
+```text
+.
+├─ public/                  # static files, robots, sitemap, headers, fonts, images
+├─ scripts/                 # build-time and verification helpers
+├─ sources/                 # original designer assets and inspiration (not deployed)
+├─ src/
+│  ├─ app/                 # routes, layout, content, sections, UI components
+│  ├─ environments/        # public config and static environment values
+│  ├─ index.html           # font preload, SEO metadata, schema markup
+│  └─ styles.css           # design tokens and shared CSS
+├─ CLAUDE.md               # design, motion, accessibility, SEO and delivery spec
+├─ README.md                # project overview and runbook
+├─ package.json             # scripts and dependencies
+└─ ...
 ```
 
-## What's on the homepage
+## Site overview
 
-1. **Hero:** full-screen photo, embossed NYX monogram, "A QUIETER / KIND OF /
-   STRENGTH." and an info bar with live opening status. The nav capsule folds
-   down to the Menu button once you scroll past the hero.
-2. **The Club:** the story, an arch-framed portrait and the one stat, "150
-   members. Never more."
-3. **Facilities:** six rooms beside a pinned floor directory that rolls like a
-   reel as you scroll (a gold rail on phones).
-4. **Training:** personal training, small groups and the coaches.
-5. **Membership:** Dusk, Nocturne and Eclipse as cream invitation cards.
-   "Enquire" pre-fills the tour form.
-6. **Testimonials:** member quotes and a partners and press row, in slow
-   infinite sliders with a Pause button.
-7. **Visit:** address, hours (today marked), click-to-load map and the tour form.
-8. **Footer:** a necklace of lights that hangs from the top line and draws
-   itself in, a pendant button that opens an invitation card, "Tap into a newer
-   you.", then contact and legal links.
+The homepage contains:
 
-`/privacy` and `/terms` are placeholder pages. The other routes (`/club`,
-`/facilities`, `/training`, `/membership`, `/visit`) are the next step.
+1. Hero with full-screen photography, monogram and quiet luxury headline
+2. The Club story and one stat
+3. Facilities with a pinned directory and room reel
+4. Training and coaching content
+5. Membership invitation cards for Dusk, Nocturne and Eclipse
+6. Testimonials and partner/press slider
+7. Visit section with hours, map and tour form
+8. Closing footer with the necklace-style invitation moment
 
-## Change the copy
+Other routes include:
 
-All text, tiers, facilities, coaches, hours, partners and contact details are
-in `src/app/content/site.ts`. Edit there; no component changes needed.
+- `/club`
+- `/facilities`
+- `/training`
+- `/membership`
+- `/visit`
+- `/privacy`
+- `/terms`
+- `/404`
 
-## Before launch: replace the sample content
+## Content and copy management
 
-To make the site feel real, some content is **invented**, with no label on
-the page. The header comment in `site.ts` lists it. Replace it all with real,
-approved details:
+All copy and content structure live in the app content files under `src/app/content/`.
 
-- **Address** (Level 3, Sea Crest House) and the **facility floors** ("Level 3"
-  etc. in the Facilities directory).
-- **Coaches:** names, bios and the AI-generated portraits. Replace them together.
-- **Member quotes:** must be real members' words, used with their consent.
-  Publishing invented reviews breaks Indian consumer-protection rules.
-- **Partners and press:** the six names (Saltwick Recovery, Monsoon Quarterly…)
-  are fictional. Use only real relationships and real coverage, with
-  permission. A fake "as featured in" misleads like a fake review.
-- **Privacy and terms:** draft text. Have a lawyer review it.
-- **Contact details** are dummies on purpose (`+91 00000 00000`,
-  `nyx.example`). Set the real ones in `config.ts` (see Configuration).
+- `site.ts` holds page copy, facility entries, membership tiers, coaches, hours, address and image references.
+- `legal.ts` holds privacy and terms copy, loaded only for the legal routes.
 
-## Photos
+Do not hard-code copy into templates. Keep all marketing and legal text in the content layer.
 
-Every photo slot is filled with an AI-generated picture supplied on 17 Nov 2026. They are smaller than the recommended sizes, so they look slightly soft
-on large or high-density screens. Replace them with real, larger photos when
-available:
+## Before launch
 
-1. Put the original in `sources/assets/` (e.g. `sources/assets/pool.jpg`).
-   `sources/` is never deployed.
-2. Run `npm run images`. Each photo becomes
-   `public/images/<name>-{640,1080,1600,2400}.webp`, and the script prints its
-   shadow, highlight and mean colours.
-3. In `site.ts`, set that image's `src` to `'/images/<name>'`, check the `alt`
-   text, and set `focus` (e.g. `'60% 40%'`) if the subject must stay in frame
-   on phones.
+The current site intentionally contains placeholder sample content and dummy contact details until the final approved brand and legal copy is supplied.
 
-A new **hero** photo needs more care: the page colour is tuned to its shadows
-and the headline sits on its quiet side. Follow the checklist in `CLAUDE.md`
-§17. Recommended sizes are listed there too. An image with an empty `src` shows
-a labelled placeholder with its size.
+Replace before launch:
 
-**Hero video (optional):** add `public/media/hero.mp4` and
-`public/media/hero.webm`, then set `hero.video: '/media/hero'` in `site.ts`. It
-plays only on wide screens when the visitor hasn't asked for reduced motion.
+- address and facility floor names
+- coach names, bios and images
+- member quotes and ratings
+- partner and press names and logos
+- privacy and terms text with legal review
+- contact details and real URLs
+- any final asset that should be production approved
 
-**Partner and press logos:** one-colour SVGs, used with permission. Put them in
-`public/images/partners/` and set each item's `logo` (and real `name`) in
-`site.testimonials.partners.items`. Until then each name shows as a text
-wordmark.
+The placeholder details are called out in the source comment header and in the project spec.
 
 ## Configuration
 
-All public settings are in `src/environments/config.ts`. Edit that file by hand;
-there is no `.env` file and nothing is generated at build time.
+Public settings are stored in `src/environments/config.ts` and intentionally committed to the repository. There is no `.env` file or generated config step.
 
-| Setting            | What it does                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| `siteUrl`          | Real domain: canonical URLs and social previews.                                           |
-| `tourEndpoint`     | URL the form POSTs to. Empty = demo success in dev, phone/WhatsApp fallback in production. |
-| `turnstileSiteKey` | Cloudflare Turnstile site key (anti-bot). Empty = off.                                     |
-| `cfAnalyticsToken` | Cloudflare Web Analytics token (cookieless; includes Core Web Vitals). Empty = off.        |
-| `contact`          | Phone, email and Instagram shown across the site.                                          |
+Update these values when the site goes live:
 
-Two things to change by hand alongside it:
+- `siteUrl`
+- `tourEndpoint`
+- `turnstileSiteKey`
+- `cfAnalyticsToken`
+- `contact`
 
-- **Site URL and phone** are also written in `src/index.html` (JSON-LD),
-  `public/robots.txt` and `public/sitemap.xml`.
-- **Form endpoint:** add its origin to `connect-src` in `public/_headers`, or
-  the browser blocks the request.
+Also update the matching static references in:
 
-Everything in `config.ts` ends up in the browser bundle: never put secrets in it.
-The request/response contract the form endpoint must follow is in `CLAUDE.md` §10.
+- `src/index.html`
+- `public/robots.txt`
+- `public/sitemap.xml`
+- `public/_headers` when the form endpoint origin is added to `connect-src`
 
-## Motion and performance
+## Assets and photography
 
-All motion is CSS: no animation libraries. Most of it is tied to scrolling
-(`animation-timeline: view()`). Browsers without scroll timelines, and visitors
-who ask for reduced motion, see everything complete and still.
+Originals live in `sources/assets/` and are never deployed. Run:
 
-Two rules keep scrolling smooth (`CLAUDE.md` §4 and §8, ADR 22):
+```bash
+npm run images
+```
 
-- **Animate only `transform` and `opacity` on scroll.** Clip-paths, colours,
-  letter-spacing and inherited custom properties make the browser restyle or
-  repaint on every frame. For reveals, scale a surface-coloured panel away
-  instead. Let elements rest in their finished state; keyframes give only the
-  start.
-- **The motion gate** (`src/app/core/motion-gate.ts`) switches animations off
-  in sections more than a screen away (`.is-far`), and back on before they can
-  be seen. New homepage sections are gated automatically if they are a
-  `<section id>` inside `<main>`.
+This creates optimised WebP files in `public/images/` for the site, while preserving the original source in `sources/`.
 
-Budgets: initial JS ≤ 130 KB gzip (the build warns at 400 kB raw), each
-component's styles ≤ 4 kB. Lighthouse mobile ≥ 95 is still to be verified on
-the deployed site.
+For a hero image or any major visual change, follow the asset checklist in [CLAUDE.md](CLAUDE.md), including tone analysis, focal point, contrast checks and the local scrim decision where relevant.
 
-## Deploy (Cloudflare Pages)
+## Deployment
 
-- Build command: `npm run build`
-- Output directory: `dist/nyx/browser`
+The site is designed to deploy as a static bundle on Cloudflare Pages or equivalent static hosting.
 
-Nothing deploys automatically from GitHub. Use Cloudflare Pages' own Git
-integration, or deploy by hand.
+Build and verify before deploy:
 
-`public/_headers` sets caching and security headers. After each build,
-`scripts/csp-hashes.mjs` adds hashes for Angular's inline scripts to the
-Content-Security-Policy, so no `'unsafe-inline'` is needed for scripts.
+```bash
+npm run build
+npm run verify:dist
+```
 
-Before deploying, run `npm run verify:dist`. It checks every route is
-prerendered and the security headers are present, and it fails while
-placeholder values (such as `nyx.example`) are still in the output.
+The production output is generated in `dist/nyx/browser`.
 
-## Fonts
+## Accessibility and quality checks
 
-Archivo and Bodoni Moda are self-hosted from `public/fonts/` (SIL Open Font
-License 1.1, see `public/fonts/LICENSE.txt`).
+There are no automated browser test suites in this project. Before release, validate manually:
+
+- desktop, tablet and mobile sizes
+- keyboard-only navigation
+- reduced-motion mode
+- form validation and fallback path
+- accessible contrast and focus states
+- build and dist verification
+
+## Notes
+
+- The project intentionally avoids animation libraries and heavy client-side JS.
+- Motion is CSS-only and designed to remain smooth on lower-end mobile devices.
+- The legal and marketing text must be approved before launch; some supplied content is intentionally sample-only.
+
+For the complete design, motion, content and deployment rules, read [CLAUDE.md](CLAUDE.md).
