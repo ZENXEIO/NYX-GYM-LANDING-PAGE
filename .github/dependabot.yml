@@ -10,6 +10,11 @@ updates:
       dev-tooling:
         dependency-type: development
         exclude-patterns: ['@angular/*', 'angular-eslint']
+    ignore:
+      # Angular pins TypeScript to a minor range (22.2 needs >=6.0 <6.1).
+      # Move TypeScript only together with an Angular upgrade.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
