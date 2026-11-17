@@ -24,16 +24,21 @@ if (!existsSync(IN)) {
 mkdirSync(OUT, { recursive: true });
 
 const only = process.argv.slice(2);
-const files = readdirSync(IN).filter((f) => EXT.has(extname(f).toLowerCase()) && (!only.length || only.includes(f)));
+const files = readdirSync(IN).filter(
+  (f) => EXT.has(extname(f).toLowerCase()) && (!only.length || only.includes(f)),
+);
 if (!files.length) {
   console.log(`No images found in ${IN}/.`);
   process.exit(0);
 }
 
-const hex = (r, g, b) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+const hex = (r, g, b) =>
+  '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 
 for (const file of files) {
-  const name = basename(file, extname(file)).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const name = basename(file, extname(file))
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
   const src = sharp(join(IN, file)).rotate(); // respect EXIF orientation
   const meta = await src.metadata();
 
@@ -46,14 +51,21 @@ for (const file of files) {
   }
 
   // Tone analysis: deepest shadow (2nd percentile luminance) and mean colour.
-  const { data, info } = await src.clone().resize(64, 64, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await src
+    .clone()
+    .resize(64, 64, { fit: 'fill' })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
   const px = [];
   for (let i = 0; i < data.length; i += info.channels) px.push([data[i], data[i + 1], data[i + 2]]);
   const lum = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
   px.sort((a, b) => lum(a) - lum(b));
   const shadow = px[Math.floor(px.length * 0.02)];
   const highlight = px[Math.floor(px.length * 0.98)];
-  const mean = px.reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0]).map((v) => v / px.length);
+  const mean = px
+    .reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0])
+    .map((v) => v / px.length);
 
   console.log(
     `${file} → /images/${name}  (${meta.width}×${meta.height})` +

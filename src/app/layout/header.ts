@@ -24,7 +24,9 @@ const HOME_SECTIONS = ['club', 'facilities', 'training', 'membership', 'testimon
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 md:px-8 md:pt-5">
+    <header
+      class="site-header pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 md:px-8 md:pt-5"
+    >
       <!-- Right-aligned, so the capsule collapses towards the Menu button. -->
       <div class="mx-auto flex max-w-[1040px] justify-end">
         <nav
@@ -125,11 +127,23 @@ const HOME_SECTIONS = ['club', 'facilities', 'training', 'membership', 'testimon
           }
         </ul>
 
+        <!-- The booking action, named as such: on phones (and once the capsule
+             has folded) this is the only "Book a tour" on screen. -->
+        <a href="/#visit" class="btn mt-6 w-full" (click)="go($event, 'visit')">{{
+          site.header.cta
+        }}</a>
+
         <div
-          class="text-plaster-muted mt-5 flex items-center justify-between gap-4 text-[0.9375rem]"
+          class="text-plaster-muted mt-3 flex items-center justify-between gap-4 text-[0.9375rem]"
         >
-          <a class="link-line" [href]="site.contact.phoneHref">{{ site.contact.phoneDisplay }}</a>
-          <a class="link-line" [href]="site.contact.instagram" rel="noopener" target="_blank"
+          <a class="link-line link-tap" [href]="site.contact.phoneHref">{{
+            site.contact.phoneDisplay
+          }}</a>
+          <a
+            class="link-line link-tap"
+            [href]="site.contact.instagram"
+            rel="noopener"
+            target="_blank"
             >Instagram</a
           >
         </div>
@@ -186,13 +200,27 @@ const HOME_SECTIONS = ['club', 'facilities', 'training', 'membership', 'testimon
     }
     /* Panel just under the capsule: full width less the gutters on phones,
        a narrow card aligned to the capsule's right edge from 768px. */
+    /* Notch and rounded-corner clearance (viewport-fit=cover). */
+    .site-header {
+      padding-top: calc(1rem + env(safe-area-inset-top));
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+    }
+    @media (min-width: 768px) {
+      .site-header {
+        padding-top: calc(1.25rem + env(safe-area-inset-top));
+        padding-left: max(2rem, env(safe-area-inset-left));
+        padding-right: max(2rem, env(safe-area-inset-right));
+      }
+    }
     .menu {
       position: fixed;
-      inset: 80px 16px auto 16px;
+      inset: calc(80px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) auto
+        max(16px, env(safe-area-inset-left));
       margin: 0;
       width: auto;
       max-width: none;
-      max-height: calc(100dvh - 96px);
+      max-height: calc(100dvh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       overflow-y: auto;
     }
     @media (min-width: 768px) {

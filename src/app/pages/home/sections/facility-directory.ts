@@ -150,7 +150,9 @@ import { Facility } from '../../../content/site';
         /* The rolling reel. Room k's stay drives the k-th slide step, shrinks
            name k and grows name k+1, in lockstep. */
         :host {
-          --slot: clamp(4.5rem, 7vw, 7rem);
+          /* Height-aware so the pinned window (5 slots + 8rem offset) fits short
+             screens too, e.g. phones in landscape and iPad split view. */
+          --slot: clamp(2.75rem, min(max(4.5rem, 7vw), (100svh - 10rem) / 5), 7rem);
         }
         .reel {
           height: calc(5 * var(--slot));
@@ -215,8 +217,10 @@ import { Facility } from '../../../content/site';
           white-space: nowrap;
           color: var(--color-plaster);
           transform-origin: left center;
-          scale: 0.55;
-          opacity: 0.28;
+          /* 55% plaster on basalt is about 5.2:1, so names away from the line
+             still pass WCAG AA contrast (was 28%, about 2:1). */
+          scale: 0.65;
+          opacity: 0.55;
           animation:
             name-grow linear both,
             name-shrink linear forwards;
@@ -272,8 +276,8 @@ import { Facility } from '../../../content/site';
     }
     @keyframes name-grow {
       from {
-        scale: 0.55;
-        opacity: 0.28;
+        scale: 0.65;
+        opacity: 0.55;
       }
       to {
         scale: 1;
@@ -286,8 +290,8 @@ import { Facility } from '../../../content/site';
         opacity: 1;
       }
       to {
-        scale: 0.55;
-        opacity: 0.28;
+        scale: 0.65;
+        opacity: 0.55;
       }
     }
     @keyframes fade-in {

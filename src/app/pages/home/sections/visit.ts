@@ -29,16 +29,18 @@ import { TourForm } from './tour-form';
             </div>
             <div>
               <dt class="text-label text-fg-muted">{{ v.contactHeading }}</dt>
-              <dd class="mt-3 flex flex-col gap-1">
-                <a class="link-line w-fit" [href]="contact.phoneHref">{{ contact.phoneDisplay }}</a>
+              <dd class="mt-1 flex flex-col">
+                <a class="link-line link-tap w-fit" [href]="contact.phoneHref">{{
+                  contact.phoneDisplay
+                }}</a>
                 <a
-                  class="link-line w-fit"
+                  class="link-line link-tap w-fit"
                   [href]="contact.whatsappHref"
                   rel="noopener"
                   target="_blank"
                   >WhatsApp</a
                 >
-                <a class="link-line w-fit" [href]="'mailto:' + contact.email">{{
+                <a class="link-line link-tap w-fit" [href]="'mailto:' + contact.email">{{
                   contact.email
                 }}</a>
               </dd>

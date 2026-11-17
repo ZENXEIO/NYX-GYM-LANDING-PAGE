@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { legal } from '../../content/legal';
 import { site } from '../../content/site';
 import { SeoService } from '../../core/seo.service';
 
-type LegalKind = keyof typeof site.legal;
+type LegalKind = keyof typeof legal;
 
-/** /privacy and /terms. Text lives in site.legal (sample text: review before launch). */
+/** /privacy and /terms. Text lives in content/legal.ts (sample text: review before launch). */
 @Component({
   selector: 'nyx-legal',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,7 +38,7 @@ type LegalKind = keyof typeof site.legal;
 export class Legal {
   /** Bound from route `data.kind` (withComponentInputBinding). */
   readonly kind = input<LegalKind>('privacy');
-  protected readonly page = computed(() => site.legal[this.kind()]);
+  protected readonly page = computed(() => legal[this.kind()]);
   protected readonly email = site.contact.email;
 
   constructor() {

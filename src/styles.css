@@ -63,7 +63,10 @@
 /* ─── Type scale & layout utilities ─────────────────────────── */
 @utility text-hero {
   font-family: var(--font-sans);
-  font-size: clamp(2.75rem, 1.2rem + 6.6vw, 8rem);
+  /* Lower bound shrinks on very narrow phones (320px) so "STRENGTH." fits;
+     the middle term is capped by height so short landscape phones keep the
+     three lines on screen. */
+  font-size: clamp(min(2.75rem, 12.5vw), min(1.2rem + 6.6vw, 15svh), 8rem);
   font-weight: 600;
   font-stretch: 118%;
   line-height: 0.95;
@@ -111,12 +114,16 @@
   width: 100%;
   max-width: 1320px;
   margin-inline: auto;
-  padding-inline: 16px;
+  /* Safe areas keep content clear of notches and rounded corners in landscape. */
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   @media (width >= 768px) {
-    padding-inline: 32px;
+    padding-left: max(32px, env(safe-area-inset-left));
+    padding-right: max(32px, env(safe-area-inset-right));
   }
   @media (width >= 1100px) {
-    padding-inline: 40px;
+    padding-left: max(40px, env(safe-area-inset-left));
+    padding-right: max(40px, env(safe-area-inset-right));
   }
 }
 @utility site-grid {
@@ -259,6 +266,19 @@
   .link-line:focus-visible {
     background-size: 100% 1px;
   }
+  /* Standalone links (contact, legal, info bar): a 44px tap target (CLAUDE.md §11)
+     made of padding, with the underline kept 2px under the text. */
+  .link-tap {
+    --tap-pad: 0.625rem;
+    display: inline-block;
+    padding-block: var(--tap-pad);
+    background-position: 0 calc(100% - var(--tap-pad) + 2px);
+  }
+  @supports (height: 1lh) {
+    .link-tap {
+      --tap-pad: max(0px, calc((44px - 1lh) / 2));
+    }
+  }
 
   /* Deco arch: semicircular top + circular notch bottom-right for the round button */
   .arch-frame {
@@ -331,10 +351,15 @@
       animation-direction: reverse;
     }
     /* Pauses while the visitor lingers, and with the pause toggle (WCAG 2.2.2). */
-    .marquee:hover .marquee-track,
     .marquee:focus-within .marquee-track,
     .marquee-group:has(.marquee-toggle input:checked) .marquee-track {
       animation-play-state: paused;
+    }
+    /* Hover pause only with a real pointer: on touch a tap would leave it stuck. */
+    @media (hover: hover) {
+      .marquee:hover .marquee-track {
+        animation-play-state: paused;
+      }
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -575,8 +600,10 @@
   .photo-hover img {
     transition: scale 1200ms var(--ease-calm);
   }
-  .photo-hover:hover img {
-    scale: 1.03;
+  @media (hover: hover) {
+    .photo-hover:hover img {
+      scale: 1.03;
+    }
   }
 
   /* Scroll-driven reveals where supported */

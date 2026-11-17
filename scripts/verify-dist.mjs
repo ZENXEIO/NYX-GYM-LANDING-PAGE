@@ -21,7 +21,7 @@ const files = walk(out);
 const text = files.filter((f) => /\.(html|js|css|txt|xml|json)$/.test(f) || f.endsWith('_headers'));
 
 // 1. Every prerendered route exists.
-for (const route of ['index.html', 'privacy/index.html', 'terms/index.html']) {
+for (const route of ['index.html', 'privacy/index.html', 'terms/index.html', '404.html']) {
   if (!existsSync(join(out, route))) fail(`missing prerendered route: ${route}`);
 }
 
@@ -54,7 +54,8 @@ else {
     if (!h.includes(`${name}:`)) fail(`_headers missing ${name}`);
   }
   const csp = /Content-Security-Policy: ([^\n]*)/.exec(h)?.[1] ?? '';
-  if (!/script-src 'self'[^;]*'sha256-/.test(csp)) fail('CSP script-src has no inline-script hashes (csp-hashes.mjs did not run)');
+  if (!/script-src 'self'[^;]*'sha256-/.test(csp))
+    fail('CSP script-src has no inline-script hashes (csp-hashes.mjs did not run)');
   if (/script-src[^;]*'unsafe-inline'/.test(csp)) fail("CSP script-src allows 'unsafe-inline'");
   if (!/frame-ancestors 'none'/.test(csp)) fail("CSP missing frame-ancestors 'none'");
 }

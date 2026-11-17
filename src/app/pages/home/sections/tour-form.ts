@@ -4,21 +4,32 @@ import {
   ElementRef,
   InjectionToken,
   Injector,
+  DestroyRef,
   afterNextRender,
+  computed,
   effect,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EnquiryState } from '../../../core/enquiry.state';
 import { TourApiService, TourField } from '../../../core/tour-api.service';
-import { site } from '../../../content/site';
+import { TierId, site } from '../../../content/site';
 import { environment } from '../../../../environments/environment';
 import { Arc } from '../../../shared/arc';
 import { indianMobile, normalisePhone, notInPast, todayIso } from './tour-form.validators';
 
-type Status = 'idle' | 'sending' | 'success' | 'rate-limited' | 'unavailable';
+type Status = 'idle' | 'sending' | 'success' | 'handoff' | 'rate-limited' | 'unavailable';
+type Interest = TierId | 'tour';
+const INTERESTS: readonly Interest[] = ['tour', 'dusk', 'nocturne', 'eclipse'];
+interface SentValues {
+  name: string;
+  date: string;
+  slot: string;
+  interest: string;
+}
 
 /** Cloudflare Turnstile site key (public). Empty = no widget. A token so tests can turn it on. */
 export const TURNSTILE_SITE_KEY = new InjectionToken<string>('TURNSTILE_SITE_KEY', {
@@ -45,7 +56,7 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
 /** Tour booking form (CLAUDE.md §10). */
 @Component({
   selector: 'nyx-tour-form',
-  imports: [ReactiveFormsModule, Arc],
+  imports: [ReactiveFormsModule, RouterLink, Arc],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="border-line bg-monsoon/60 border p-6 md:p-10">
@@ -58,6 +69,27 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
           <p class="text-body-lg mt-6">{{ copy.success }}</p>
           <button type="button" class="btn mt-8" (click)="startAgain()">
             {{ copy.startAgain }}
+          </button>
+        </div>
+      } @else if (status() === 'handoff') {
+        <!-- No form endpoint yet: the visitor sends the written-out request on WhatsApp. -->
+        <div class="success-in mt-8" role="status">
+          <p class="text-label text-accent">{{ copy.handoff.heading }}</p>
+          <p class="text-body-lg mt-4">{{ copy.handoff.text }}</p>
+          <div class="mt-8 flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
+            <a class="btn" [href]="whatsappHref()" rel="noopener" target="_blank">{{
+              copy.handoff.cta
+            }}</a>
+            <a class="link-line link-tap text-bronze-light self-start" [href]="contact.phoneHref"
+              >{{ copy.fallbackCall }} {{ contact.phoneDisplay }}</a
+            >
+          </div>
+          <button
+            type="button"
+            class="text-label link-line text-fg-muted mt-8 min-h-11"
+            (click)="editDetails()"
+          >
+            {{ copy.handoff.edit }}
           </button>
         </div>
       } @else {
@@ -193,7 +225,7 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
                 >
                 <a
                   class="link-line text-bronze-light"
-                  [href]="contact.whatsappHref"
+                  [href]="whatsappHref()"
                   rel="noopener"
                   target="_blank"
                   >{{ copy.fallbackWhatsapp }}</a
@@ -220,6 +252,10 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
               >
             </span>
           </button>
+          <p class="text-fg-muted text-[0.9375rem]">
+            {{ copy.privacy.text }}
+            <a class="link-line text-fg" routerLink="/privacy">{{ copy.privacy.link }}</a>
+          </p>
         </form>
       }
     </div>
@@ -362,6 +398,22 @@ export class TourForm {
   private readonly serverErrors = signal<Partial<Record<TourField, string>>>({});
   private readonly turnstileEl = viewChild<ElementRef<HTMLElement>>('turnstile');
   private readonly interestSelect = viewChild<ElementRef<HTMLSelectElement>>('interestSelect');
+  /** The form values the WhatsApp message is written from, captured on submit. */
+  private readonly sent = signal<SentValues | null>(null);
+
+  /** WhatsApp link with the request written out (name, date, time, interest; never phone or email). */
+  protected readonly whatsappHref = computed(() => {
+    const v = this.sent();
+    if (!v) return this.contact.whatsappHref;
+    const label = (list: readonly { value: string; label: string }[], value: string) =>
+      list.find((i) => i.value === value)?.label ?? value;
+    const text = this.copy.handoff.message
+      .replace('{name}', v.name.trim())
+      .replace('{date}', formatDate(v.date))
+      .replace('{slot}', label(this.copy.slots, v.slot))
+      .replace('{interest}', label(this.copy.interests, v.interest));
+    return `${this.contact.whatsappHref}?text=${encodeURIComponent(text)}`;
+  });
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
@@ -382,6 +434,17 @@ export class TourForm {
         requestAnimationFrame(() => this.flashInterest());
       }
     });
+
+    // Pre-fill from the URL too (/?interest=eclipse#visit). "Enquire" carries the
+    // tier there, so the choice survives even when its click lands before the
+    // membership section has hydrated, or arrives as a full page load. It goes
+    // through EnquiryState, so the effect above stays the one place that writes
+    // the field (setting the control here would be overwritten by that effect).
+    const sub = inject(ActivatedRoute).queryParamMap.subscribe((params) => {
+      const interest = params.get('interest') as Interest | null;
+      if (interest && INTERESTS.includes(interest)) this.enquiry.interest.set(interest);
+    });
+    inject(DestroyRef).onDestroy(() => sub.unsubscribe());
 
     afterNextRender(() => {
       this.minDate.set(todayIso());
@@ -410,6 +473,7 @@ export class TourForm {
     this.status.set('sending');
 
     const v = this.form.getRawValue();
+    this.sent.set(v);
     this.api
       .submit(
         { ...v, phone: normalisePhone(v.phone), turnstileToken: this.turnstileToken || undefined },
@@ -428,6 +492,11 @@ export class TourForm {
             this.resetTurnstile();
             this.focusFirstError();
             break;
+          case 'unavailable':
+            // No endpoint configured: finish on WhatsApp. Endpoint down: fallback message.
+            this.status.set(this.api.endpoint ? 'unavailable' : 'handoff');
+            this.resetTurnstile();
+            break;
           default:
             this.status.set(result.kind);
             this.resetTurnstile();
@@ -440,6 +509,14 @@ export class TourForm {
     this.submitted.set(false);
     this.status.set('idle');
     // The form (and its Turnstile container) is rendered again: give it a new widget.
+    if (this.turnstileEnabled) {
+      afterNextRender(() => this.renderTurnstile(), { injector: this.injector });
+    }
+  }
+
+  /** Back from the WhatsApp step to the filled-in form. */
+  protected editDetails(): void {
+    this.status.set('idle');
     if (this.turnstileEnabled) {
       afterNextRender(() => this.renderTurnstile(), { injector: this.injector });
     }
@@ -488,6 +565,19 @@ export class TourForm {
     const turnstile = (window as TurnstileWindow).turnstile;
     if (turnstile && this.turnstileId !== undefined) turnstile.reset(this.turnstileId);
   }
+}
+
+/** '2026-11-20' → '20 November 2026' (the date as picked, no time-zone shift). */
+function formatDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      });
 }
 
 function newKey(): string {

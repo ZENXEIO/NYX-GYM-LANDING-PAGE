@@ -8,6 +8,8 @@ export interface PageSeo {
   description: string;
   /** Path beginning with '/', e.g. '/' or '/membership'. */
   path: string;
+  /** Keep the page out of search results (the 404 page). */
+  noindex?: boolean;
 }
 
 /** Sets title, description, canonical and Open Graph/Twitter tags per route. */
@@ -17,7 +19,7 @@ export class SeoService {
   private readonly meta = inject(Meta);
   private readonly doc = inject(DOCUMENT);
 
-  set({ title, description, path }: PageSeo): void {
+  set({ title, description, path, noindex = false }: PageSeo): void {
     const url = environment.siteUrl + path;
     const image = `${environment.siteUrl}/og.png`;
 
@@ -41,6 +43,8 @@ export class SeoService {
     ];
     named.forEach((tag) => this.meta.updateTag(tag, `name="${tag.name}"`));
     og.forEach((tag) => this.meta.updateTag(tag, `property="${tag.property}"`));
+    if (noindex) this.meta.updateTag({ name: 'robots', content: 'noindex' });
+    else this.meta.removeTag('name="robots"');
 
     let canonical = this.doc.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) {

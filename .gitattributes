@@ -1,0 +1,6 @@
+# Keep LF everywhere so Prettier (endOfLine: lf) passes on Windows checkouts too.
+* text=auto eol=lf
+*.png binary
+*.webp binary
+*.woff2 binary
+*.jpg binary

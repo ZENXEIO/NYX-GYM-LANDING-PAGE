@@ -130,7 +130,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                   (click)="close(false)"
                   >{{ f.invitation.cta }}</a
                 >
-                <a class="link-line text-ink" [href]="site.contact.phoneHref">{{
+                <a class="link-line link-tap text-ink" [href]="site.contact.phoneHref">{{
                   site.contact.phoneDisplay
                 }}</a>
                 <button
@@ -147,7 +147,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
       </div>
 
       <!-- Contact details. Opaque and above the card, which hides behind it. -->
-      <div class="bg-basalt border-line relative z-10 border-t pt-16 pb-10 md:pt-20">
+      <div class="bg-basalt border-line footer-base relative z-10 border-t pt-16 pb-10 md:pt-20">
         <div class="site-container">
           <div class="site-grid gap-y-12">
             <div class="col-span-4 md:col-span-5">
@@ -166,20 +166,20 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
 
             <div class="col-span-2 md:col-span-3">
               <h2 class="text-label text-plaster-muted">Contact</h2>
-              <ul class="mt-4 flex flex-col gap-2">
+              <ul class="mt-2 flex flex-col">
                 <li>
-                  <a class="link-line" [href]="site.contact.phoneHref">{{
+                  <a class="link-line link-tap" [href]="site.contact.phoneHref">{{
                     site.contact.phoneDisplay
                   }}</a>
                 </li>
                 <li>
-                  <a class="link-line" [href]="'mailto:' + site.contact.email">{{
+                  <a class="link-line link-tap" [href]="'mailto:' + site.contact.email">{{
                     site.contact.email
                   }}</a>
                 </li>
                 <li>
                   <a
-                    class="link-line"
+                    class="link-line link-tap"
                     [href]="site.contact.whatsappHref"
                     rel="noopener"
                     target="_blank"
@@ -188,7 +188,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
                 </li>
                 <li>
                   <a
-                    class="link-line"
+                    class="link-line link-tap"
                     [href]="site.contact.instagram"
                     rel="noopener"
                     target="_blank"
@@ -206,7 +206,7 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
             <ul class="flex gap-6">
               @for (l of f.legal; track l.path) {
                 <li>
-                  <a class="link-line" [routerLink]="l.path">{{ l.label }}</a>
+                  <a class="link-line link-tap" [routerLink]="l.path">{{ l.label }}</a>
                 </li>
               }
             </ul>
@@ -216,6 +216,10 @@ import { NARROW_NECKLACE, WIDE_NECKLACE } from './necklace';
     </footer>
   `,
   styles: `
+    /* Clear of the home indicator on notched phones and tablets. */
+    .footer-base {
+      padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+    }
     /* Scroll-linked, part by part. Every piece animates its own opacity or
        transform on the necklace's view timeline, where the moment runs from
        cover 5% to cover 50% ("p" 0 to 1 below): the halves draw over p 0–0.85,

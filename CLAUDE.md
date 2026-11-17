@@ -59,6 +59,7 @@ Standing spec for the NYX marketing site. Read this before any change. If a deci
       app.routes.ts             lazy loadComponent per page + route titles
       app.ts                    shell: skip link, <nyx-header>, <main id="main">, <nyx-footer>
       content/site.ts           ALL copy, tiers, facilities, coaches, hours, address, image paths (typed)
+      content/legal.ts          privacy and terms text, split out so it loads only with /privacy and /terms
       core/
         seo.service.ts          title, description, canonical, OG/Twitter per route
         analytics.service.ts    web-vitals + error reporting (browser only, prod only)
@@ -72,8 +73,10 @@ Standing spec for the NYX marketing site. Read this before any change. If a deci
         home/sections/          hero (+ monogram, info bar), club, facilities (+ facility-directory), training, membership,
                                 testimonials, visit, tour-form (+ validators), map-embed
         legal/legal.ts          placeholder /privacy and /terms
+        not-found/not-found.ts  /404 (noindex), and the `**` route; copied to 404.html after the build
         club/ facilities/ training/ membership/ visit/     ← Step 3
-  public/                       _headers, robots.txt, sitemap.xml, favicon.svg, og.png, fonts/, images/, media/
+  public/                       _headers, robots.txt, sitemap.xml, favicon.svg, apple-touch-icon.png, icon-512.png,
+                                site.webmanifest, og.png, fonts/, images/, media/
   scripts/optimize-images.mjs   sharp pipeline (section 17)
   scripts/csp-hashes.mjs        post-build: hashes inline scripts into the CSP in dist/.../_headers
   scripts/dist.mjs              shared post-build helpers: distDir(), walk()
@@ -169,6 +172,7 @@ Rules:
   - Desktop: 12 columns, max width 1320px, 24px gutter.
   - Mobile: 4 columns, **16px side gutters**.
   - Breakpoints are mobile-first: 768px and 1100px.
+- **Every phone and tablet (17 Nov 2026):** `viewport-fit=cover` is paired with `env(safe-area-inset-*)` on `site-container`, the header capsule and menu, the hero info bar and the footer base. The hero size shrinks below 44px only under 352px wide (`12.5vw` floor) and is capped at `15svh` so short landscape phones keep the headline on screen; `max-height: 520px` landscape tightens the hero padding. The Facilities reel's `--slot` is height-aware so the pinned window fits short screens. Hover zoom and hover-pause apply only under `(hover: hover)`, so they never stick after a tap.
 - Use asymmetric splits (text in cols 2–6, image in cols 7–12, alternating). Never use identical card grids.
 - Hairline 1px borders (`line` / `line-dark`).
 - Radius:
@@ -202,7 +206,7 @@ Rules:
   - **Club:** the arch opens from its base to its crown (a plaster panel shrinking towards the crown) and the photo eases from 1.08 (`.arch-open`). The stat's hairline draws (`.rule-draw`), "150" settles from a touch large (`.track-settle`, scale 1.035 to 1; was letter-spacing, which re-laid out the page every frame) and the caption follows (`.after-settle`).
   - **Facilities: the floor directory (ADR 20).** Inspired by the user's 21st.dev "order-tracking" pick, rebuilt as a lobby floor directory in gold, not a delivery tracker: no icons, check marks or numbers.
     - From 768px, a `<nav aria-label="Rooms">` (cols 1–5) stays pinned on the left (`top: 8rem`) while the rooms scroll on the right (cols 6–12); photos bleed to the right edge. Each name links to its room (`/#facility-<id>`, smooth `scrollIntoView`).
-    - **The rolling reel (17 Nov 2026):** the directory is a window five slots tall (`--slot: clamp(4.5rem, 7vw, 7rem)`, hard edges). The names are large Archivo Expanded 600 in sentence case (up to 2.5rem). Between one room's arrival and the next, the list slides up exactly one slot (one additive `reel-step` animation per room, `animation-composition: add`), so the room you are in sits level with a short gold tick in the margin. Each name grows (`scale` 0.55 to 1, `opacity` 0.28 to 1, its floor label fading in) during the previous room's stay, and shrinks during its own (fill `forwards` only, so it never overrides the growing before it starts). A focused link un-clips the window and shows at full opacity.
+    - **The rolling reel (17 Nov 2026):** the directory is a window five slots tall (`--slot: clamp(4.5rem, 7vw, 7rem)`, hard edges). The names are large Archivo Expanded 600 in sentence case (up to 2.5rem). Between one room's arrival and the next, the list slides up exactly one slot (one additive `reel-step` animation per room, `animation-composition: add`), so the room you are in sits level with a short gold tick in the margin. Each name grows (`scale` 0.65 to 1, `opacity` 0.55 to 1, about 5.2:1 contrast at rest so every link passes AA; was 0.55 and 0.28, about 2:1, until 17 Nov 2026, its floor label fading in) during the previous room's stay, and shrinks during its own (fill `forwards` only, so it never overrides the growing before it starts). A focused link un-clips the window and shows at full opacity.
     - A 1px line joins the markers. A room **arrives** when its top reaches the middle of the screen: its marker fills `bronze-light` and its name brightens. It stays **here** (an outer `bronze` ring, like the invitations' double frame, and a gold floor label) until the next room arrives, while the segment to the next marker fills.
     - Phones: one rail down the left gutter, its gold tip at the middle of the screen; markers sit level with the room names and fill as the tip passes.
     - CSS only. `facilities.ts` holds the rooms and the phone rail; `facility-directory.ts` holds the reel (split so each fits the 4 kB component-style budget and stays out of the initial CSS). Each room is a named view timeline (`--room-0`…`--room-5` via `--tl`), shared with the directory by `timeline-scope` on the section. The section uses `overflow-x: clip` (never `hidden`, which would break the sticky directory). Without scroll timelines or with reduced motion: a still directory of hairline rings.
@@ -229,7 +233,7 @@ Rules:
 2. **Floating nav capsule (`nyx-header`).** A slim framed bar centred at the top with a hairline border.
    - Desktop: NYX wordmark left · "Private fitness club, Worli" centre · Menu and **Book a tour** right.
    - Mobile: wordmark and Menu only.
-   - **Menu (changed 17 Nov 2026):** a compact panel that drops down under the capsule, not a full-screen page. The page stays visible behind a light basalt scrim. It lists the homepage sections, then the phone number and Instagram.
+   - **Menu (changed 17 Nov 2026):** a compact panel that drops down under the capsule, not a full-screen page. The page stays visible behind a light basalt scrim. It lists the homepage sections, then a full-width **Book a tour** button (the only one on phones and once the capsule has folded), then the phone number and Instagram.
      - Every item **scrolls to its section on the homepage**: smoothly, or instantly with reduced motion. It never opens a separate page.
      - From `/privacy` or `/terms`, an item returns to the homepage, waits until every section has rendered, then jumps.
      - Links keep real `/#section` hrefs, so they work without JavaScript and with Ctrl/Cmd-click.
@@ -275,6 +279,8 @@ Rules:
 
 Routes: `/` · `/club` · `/facilities` · `/training` · `/membership` · `/visit` · `/privacy` · `/terms`
 
+Unknown addresses: `/404` is prerendered (noindex) and `scripts/csp-hashes.mjs` copies it to `404.html`, which Cloudflare Pages serves with a real 404 status. In the app, `**` renders the same page (never a redirect to `/`, which made every bad link a soft 404).
+
 ```
 ┌──────────────────────────────────────────────────┐
 │   ┌ NYX ── Private fitness club, Worli ── Menu  [Book a tour] ┐   floating nav capsule
@@ -318,7 +324,7 @@ Homepage sections, in order:
 - Sell the experience and the result, not the equipment list.
 - CTAs say exactly what happens: "Book a tour", "Enquire", "Send request".
 - Errors say what's wrong and how to fix it. They never apologise.
-- **All copy lives in `content/site.ts`.** Never hard-code copy in templates.
+- **All copy lives in `content/`**: `site.ts`, plus `legal.ts` for the privacy and terms text (split out so it stays out of the initial bundle). Never hard-code copy in templates.
 
 ## 7. Coding conventions
 
@@ -384,7 +390,7 @@ How:
 **Graceful degradation:**
 
 - All content is readable with JavaScript disabled, because the pages are prerendered.
-- If the form endpoint fails, the form shows the club's phone number and WhatsApp link.
+- If the form endpoint fails, the form shows the club's phone number and a WhatsApp link with the request already written out.
 
 ## 10. Tour form contract
 
@@ -419,7 +425,10 @@ The phone number is sent normalised, with spaces and hyphens removed.
 - One retry with backoff, only on network errors or 5xx.
 - Submit is disabled while sending, so a double submit isn't possible.
 - Never log PII.
-- With no endpoint configured: simulate success in dev only. In production, return `unavailable` (phone/WhatsApp fallback) so no lead is silently lost.
+- With no endpoint configured: simulate success in dev only. In production, return `unavailable` so no lead is silently lost.
+- **WhatsApp hand-off (17 Nov 2026, ADR 23):** when the result is `unavailable` and no endpoint is configured, `tour-form.ts` shows "One last step" instead of an error: a **Continue on WhatsApp** button opening `wa.me/<phone>?text=` with the request written out (name, date, time of day, interest; never phone or email), the phone number, and **Change details**. Nothing leaves the browser unless the visitor taps. With an endpoint, `unavailable` means it failed, so the fallback message shows, its WhatsApp link pre-filled the same way. Copy: `site.visit.form.handoff`.
+- **Privacy notice:** one line under "Send request" with a link to `/privacy` (`site.visit.form.privacy`), as the DPDP Act 2023 expects notice at the point of collection.
+- **Pre-filled interest:** "Enquire" sets `EnquiryState` and also links to `/?interest=<tier>#visit`. The form reads the `interest` query parameter (only `tour`, `dusk`, `nocturne`, `eclipse`) into `EnquiryState`; one `effect` writes the field. So the choice also survives a full page load.
 
 **The endpoint must** (it's implemented outside this repo, e.g. a serverless function):
 
@@ -437,7 +446,7 @@ The phone number is sent normalised, with spaces and hyphens removed.
 - Skip link, semantic landmarks, one `h1` per page (the hero headline) and a logical heading order.
 - Menu: a native `<dialog>` opened with `showModal()`, styled as a drop-down panel. It has a focus trap, closes with Esc, the Close button or a click on the backdrop, and returns focus to the trigger.
 - Every input has a `<label>`. Errors are linked via `aria-describedby`, and focus moves to the first error on submit.
-- Touch targets of at least 44×44px, round buttons included.
+- Touch targets of at least 44×44px, round buttons included. Standalone text links (contact, legal, info bar, menu footer) add `.link-tap` to `.link-line`: padding up to 44px, underline kept 2px under the text. Links inside sentences are exempt.
 - Every image has meaningful alt text, placeholders included. The embossed monogram is decorative (`aria-hidden`). The video is silent and has a pause control.
 - Text over the hero image meets 4.5:1 wherever it sits. Add a local scrim if the measured contrast falls short.
 
@@ -473,11 +482,13 @@ The phone number is sent normalised, with spaces and hyphens removed.
 
 - `npm run lint` (angular-eslint) and `npm run format:check` (Prettier).
 - `npm run build`: TypeScript strict and Angular strict templates, the bundle budgets in `angular.json`.
-- `npm run verify:dist` after a build: every route is prerendered; no `nyx.example`, localhost or source maps; security headers and a hashed CSP are present.
+- `npm run verify:dist` after a build: every route is prerendered and `404.html` exists; no `nyx.example`, localhost or source maps; security headers and a hashed CSP are present.
 
 **Not covered by anything now:** behaviour, accessibility (axe), performance (Lighthouse) and the form's error handling. Check these by hand in a browser before each release (section 15).
 
 **Deploys:** nothing deploys automatically from GitHub. Use Cloudflare Pages' own Git integration, or deploy by hand (build command `npm run build`, output `dist/nyx/browser`). `.github/dependabot.yml` remains, so Dependabot still opens weekly update PRs, with nothing to verify them.
+
+**Enquire pre-fill on phones (re-checked 17 Nov 2026):** a pre-launch audit reported the tier lost at 375px. That was a measurement error: on phones the form sits about 1,800px below the top of Visit and had not hydrated yet when it was read. It shows the right tier once it scrolls into view (verified at 320, 375 and 430px). The URL parameter (section 10) and `hydrate on interaction` on the membership block were added anyway.
 
 **Open observation from the last test run (17 Nov 2026), not resolved:** the Playwright test that clicks "Enquire" on the Eclipse tier failed twice out of about 36 runs. The click was delivered, but the URL stayed at `/` instead of `/#visit`. The link sits in a `hydrate on viewport` block, and the test clicked straight after scrolling to it under heavy CPU load. The cause was never established. If it is a click lost during hydration, it is a real bug on the enquiry path. Try it by hand on a slow device.
 
@@ -517,6 +528,9 @@ The phone number is sent normalised, with spaces and hyphens removed.
 | 20  | Facilities becomes a floor directory with a gold, scroll-linked tracking line, then a big rolling reel (17 Nov 2026)                                     | User's request: the facility motion still felt wrong; they liked the 21st.dev order-tracking idea "in golden colour", premium. Rebuilt in CSS (ADR 3) as a hotel-lobby directory; replaces the alternating rows; the photo motions stay. User then asked for it "big" and moving with the scroll: the reel |
 | 21  | The nav capsule folds to the Menu button past the hero, and opens again in the hero (17 Nov 2026)                                                        | User's request. Keeps the hero's full capsule, gives the rest of the page an uncluttered view. Booking is still one tap away in the menu                                                                                                                                                                   |
 | 22  | Motion gate for off-screen sections, and GPU-only scroll motion (17 Nov 2026)                                                                            | User: "website is a little bit laggy". Profiling showed every scroll animation on the page was serviced each frame, and several animated main-thread properties. Same motions, rebuilt on transform/opacity                                                                                                |
+| 23  | With no form endpoint, the tour form hands the request off to WhatsApp, written out (17 Nov 2026)                                                        | Audit: every production booking failed with "not responding". The user chose no backend for now; this gives a working path today, and stays as the fallback once an endpoint exists                                                                                                                        |
+| 24  | A real 404: `/404` prerendered and copied to `404.html`; `**` renders it instead of redirecting home (17 Nov 2026)                                       | Audit: unknown addresses were soft 404s (status 200, homepage), bad for search and confusing for visitors                                                                                                                                                                                                  |
+| 25  | Legal text moved to `content/legal.ts` (17 Nov 2026)                                                                                                     | Kept the initial bundle under the 400 kB warning budget once the hand-off and 404 copy were added; the text is only needed on `/privacy` and `/terms`                                                                                                                                                      |
 
 ## 17. Assets
 

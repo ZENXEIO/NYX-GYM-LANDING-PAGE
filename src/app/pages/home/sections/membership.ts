@@ -56,6 +56,7 @@ import { Reveal } from '../../../shared/reveal';
               <a
                 routerLink="/"
                 fragment="visit"
+                [queryParams]="{ interest: t.id }"
                 class="btn mt-10 w-full"
                 [attr.aria-label]="m.cta + ' about ' + t.name + ' membership'"
                 (click)="enquire(t.id)"

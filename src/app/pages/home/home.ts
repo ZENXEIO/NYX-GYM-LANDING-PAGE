@@ -36,7 +36,8 @@ import { Visit } from './sections/visit';
     } @placeholder {
       <div class="bg-monsoon min-h-svh"></div>
     }
-    @defer (on immediate; hydrate on viewport) {
+    <!-- Also hydrates on a tap, so "Enquire" always runs its handler. -->
+    @defer (on immediate; hydrate on viewport; hydrate on interaction) {
       <nyx-membership />
     } @placeholder {
       <div class="bg-plaster min-h-svh"></div>

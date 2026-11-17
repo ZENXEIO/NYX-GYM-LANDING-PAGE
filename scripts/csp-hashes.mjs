@@ -2,11 +2,16 @@
 // prerendered HTML and write a strict script-src into dist/.../_headers.
 // Keeps CSP strict without 'unsafe-inline' (CLAUDE.md §9).
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { distDir, walk } from './dist.mjs';
 
 const out = distDir('csp');
+
+// Cloudflare Pages serves a top-level 404.html, with a 404 status, for unknown
+// addresses (CLAUDE.md §5). Copied before hashing so its scripts are covered.
+const notFound = join(out, '404', 'index.html');
+if (existsSync(notFound)) copyFileSync(notFound, join(out, '404.html'));
 
 const sha = (s) => `'sha256-${createHash('sha256').update(s, 'utf8').digest('base64')}'`;
 const scripts = new Set();
@@ -19,7 +24,8 @@ for (const file of walk(out, /\.html$/)) {
     if (type && !/javascript|module/i.test(type)) continue; // e.g. JSON-LD is not executed
     if (m[2].trim()) scripts.add(sha(m[2]));
   }
-  for (const m of html.matchAll(/\son[a-z]+="([^"]*)"/gi)) handlers.add(sha(m[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'")));
+  for (const m of html.matchAll(/\son[a-z]+="([^"]*)"/gi))
+    handlers.add(sha(m[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'")));
 }
 
 const scriptSrc = [
@@ -36,4 +42,6 @@ const headers = readFileSync(headersFile, 'utf8').replace(
   (_, k, v) => `${k}${v.replace(/;?\s*script-src[^;]*/, '')}; ${scriptSrc}`,
 );
 writeFileSync(headersFile, headers);
-console.log(`[csp] ${scripts.size} inline script hash(es), ${handlers.size} handler hash(es) written to ${headersFile}`);
+console.log(
+  `[csp] ${scripts.size} inline script hash(es), ${handlers.size} handler hash(es) written to ${headersFile}`,
+);

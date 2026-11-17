@@ -64,7 +64,7 @@ import { Photo } from '../../../shared/photo';
       <!-- Edge fade: melts the image into the page -->
       <div class="hero-fade pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
 
-      <div class="site-container flex flex-1 flex-col justify-end pt-32 pb-36 md:pb-40">
+      <div class="hero-copy site-container flex flex-1 flex-col justify-end pt-32 pb-36 md:pb-40">
         <h1 id="hero-title" class="text-hero text-plaster">
           @for (line of hero.lines; track line) {
             <span class="hero-line block">{{ line }}</span>
@@ -85,7 +85,7 @@ import { Photo } from '../../../shared/photo';
       </div>
 
       <!-- Info bar -->
-      <div class="hero-late absolute inset-x-0 bottom-4 md:bottom-6">
+      <div class="hero-late hero-bar absolute inset-x-0 bottom-4 md:bottom-6">
         <div class="site-container">
           <ul
             class="text-label border-line text-plaster-muted flex h-12 items-center justify-between gap-4 rounded-[4px] border px-4 md:h-14 md:px-6"
@@ -99,7 +99,7 @@ import { Photo } from '../../../shared/photo';
             </li>
             <li>
               <a
-                class="link-line text-plaster"
+                class="link-line link-tap text-plaster"
                 [href]="site.contact.instagram"
                 rel="noopener"
                 target="_blank"
@@ -143,6 +143,26 @@ import { Photo } from '../../../shared/photo';
             color-mix(in srgb, var(--color-basalt) 70%, transparent) 0%,
             transparent 55%
           );
+      }
+    }
+    /* Clear of the home indicator on notched phones and tablets. */
+    .hero-bar {
+      bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+    @media (min-width: 768px) {
+      .hero-bar {
+        bottom: calc(1.5rem + env(safe-area-inset-bottom));
+      }
+    }
+    /* Short landscape phones: tighter padding so the headline and info bar
+       fit one screen. */
+    @media (max-height: 520px) and (orientation: landscape) {
+      .hero-copy {
+        padding-top: 6rem;
+        padding-bottom: 6.5rem;
+      }
+      .hero-monogram {
+        font-size: 30vw;
       }
     }
     /* A slow breath on the "open now" dot: the one live detail in the hero. */

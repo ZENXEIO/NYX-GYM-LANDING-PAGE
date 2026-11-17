@@ -15,5 +15,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/legal/legal').then((m) => m.Legal),
     data: { kind: 'terms' },
   },
-  { path: '**', redirectTo: '' },
+  // Prerendered to /404/index.html; the post-build step copies it to /404.html,
+  // which Cloudflare Pages serves with a real 404 status for unknown addresses.
+  {
+    path: '404',
+    loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound),
+  },
+  {
+    path: '**',
+    loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound),
+  },
 ];
