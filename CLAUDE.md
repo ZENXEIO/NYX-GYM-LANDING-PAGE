@@ -16,7 +16,7 @@ Standing spec for the NYX marketing site. Read this before any change. If a deci
 
   Never start the next step without the user's approval.
 - **Placeholders:** every address, phone number, coach, testimonial, photo and video is a **clearly labelled placeholder** until the user supplies the real one (section 17).
-- **Location:** the Angular app lives directly in the repo root (`Frontend/`). Do **not** nest it in a subfolder. All paths below are relative to the root.
+- **Location:** the Angular app lives directly in the git repo root, next to `.github/`. Do **not** nest it in a subfolder: GitHub only reads workflows from the root `.github/`, so a nested app never runs CI. All paths below are relative to the root.
 - **`sources/`** (at the repo root) holds the user's inspiration screenshots and original assets. It is **never deployed** and never served directly.
 
 ## 2. Commands (run in the repo root)
@@ -43,7 +43,7 @@ Standing spec for the NYX marketing site. Read this before any change. If a deci
 - **Not allowed:** UI component libraries, `@angular/animations`, jQuery, GSAP or other motion libraries. **Motion is CSS only.**
 
 ```
-(repo root = Frontend/)
+(repo root)
   sources/                      inspiration + original assets (never deployed)
   src/
     styles.css                  @theme tokens, base layer, @layer components, motion keyframes, reduced-motion
@@ -287,7 +287,7 @@ Homepage sections, in order:
 - Light sections set a `data-surface="light"` attribute. Components read surface-aware tokens (`--fg`, `--accent`, `--hairline`) from it rather than branching in templates.
 - **Browser-only code** (window, document, IntersectionObserver, video, analytics, Turnstile) runs only inside `afterNextRender` or behind `isPlatformBrowser`, so prerendering never breaks.
 - TypeScript `strict`, no `any`. angular-eslint and Prettier with `prettier-plugin-tailwindcss`.
-- **No secrets in the repo.** Public config (site URL, form endpoint, Turnstile site key, analytics token, phone/email/Instagram) lives in `.env` (git-ignored; template in `.env.example`). `scripts/set-env.mjs` generates the git-ignored `src/environments/*.ts`; host env vars override `.env`. `%NYX_SITE_URL%` / `%NYX_PHONE%` tokens in `index.html`, `robots.txt` and `sitemap.xml` are filled post-build, and the form origin is added to `connect-src`. Production builds fail on placeholder values when `CI=true` or `NYX_STRICT=true`.
+- **No secrets in the repo.** Public config (site URL, form endpoint, Turnstile site key, analytics token, phone/email/Instagram) lives in `.env` (git-ignored; template in `.env.example`). `scripts/set-env.mjs` generates the git-ignored `src/environments/*.ts`; host env vars override `.env`. `%NYX_SITE_URL%` / `%NYX_PHONE%` tokens in `index.html`, `robots.txt` and `sitemap.xml` are filled post-build, and the form origin is added to `connect-src`. Production builds (`npm run build`) fail on placeholder values when `CI=true` or `NYX_STRICT=true`. The e2e build (`npm run e2e:build`) is exempt, because it is never deployed (section 14).
 
 ## 8. Performance budgets (a merge is blocked if one is exceeded)
 
@@ -406,13 +406,17 @@ The phone number is sent normalised, with spaces and hyphens removed.
 
 ## 14. Testing & CI
 
-**Status (16 Nov 2026):**
+**Status (17 Nov 2026, all run locally on Windows with `CI=true`; nothing below has run on GitHub yet):**
 The full test plan is in **`TESTING.md`**.
-- **Unit and component (run, passing):** 273 tests across 26 files, including Turnstile render/reset/re-render via the `TURNSTILE_SITE_KEY` token. Coverage is 97.5% of statements and 95.2% of branches. The thresholds in `angular.json` are 85/80/85/85. `src/test-setup.ts` fills jsdom gaps (dialog, matchMedia, IntersectionObserver); `src/app/testing/render.ts` is the shared render helper.
+- **Unit and component (run, passing):** 273 tests across 26 files, including Turnstile render/reset/re-render via the `TURNSTILE_SITE_KEY` token. Coverage is 98.2% of statements and 97.0% of branches. The thresholds in `angular.json` are 85/80/85/85. `src/test-setup.ts` fills jsdom gaps (dialog, matchMedia, IntersectionObserver); `src/app/testing/render.ts` is the shared render helper.
 - **Build scripts (run, passing):** 35 Node tests in `scripts/test/`.
-- **Lint and format check pass.**
-- **E2E (written, type-checked, not yet run):** 300 Playwright tests (100 per viewport, plus visual) in `e2e/`. They run against `dist/e2e`, a production build whose form endpoint is `https://forms.nyx.test/tour`. Every test intercepts it; the fixture blocks all other external requests and fails on any console error.
+- **Lint, format check and `npm audit --omit=dev --audit-level=high` pass.**
+- **E2E (first run 17 Nov 2026: 276 passed, 4 failed, 4 skipped of 284 non-visual tests):** Playwright specs in `e2e/`, at 375, 768 and 1440px. They run against `dist/e2e`, a production build whose form endpoint is `https://forms.nyx.test/tour`. Every test intercepts it; the fixture blocks all other external requests and fails on any console error.
   - home, navigation (keyboard, menu dialog), tour form (every response status, timeout, idempotency, honeypot, pre-fill), SEO and no-JS, motion and reduced motion, performance guards.
+  - **Two tests are intermittent and still open** (details in `TESTING.md`):
+    1. `performance.spec.ts` "below-the-fold sections hydrate only when scrolled to": failed 5 of 9 repeats. **The test is at fault, not the site.** `scrollThrough` moves half a viewport every 60 ms and the assertion runs straight after, which races the IntersectionObserver. Scrolling at 400 ms per step hydrates Facilities, Training, Membership and the tour form in order, each at its own scroll position. Fix the test (scroll to one section, then `expect.poll` for a new chunk) before relying on it.
+    2. `tour-form.spec.ts` "Enquire on Eclipse pre-fills the form": failed once on mobile and once on tablet in the full 4-worker run (the click left the URL at `/`), then passed 27 of 27 with 2 workers. **Cause not established.** It may be a lost click during hydration under CPU load, which would be a real bug on the page's most important path. Investigate before launch.
+  - CI retries each test twice, so these can still turn the `e2e` job red until they are fixed.
 - **Accessibility:** `e2e/a11y.spec.ts` uses `@axe-core/playwright` (WCAG 2.2 AA) and expects zero violations on dark and plaster sections, the open menu, form errors, alerts, success and the legal pages.
 - **Visual regression:** `npm run e2e:visual`. There are no baselines yet: generate them with `-u` once the design is approved.
 - **Lighthouse CI:** `lighthouserc.json` enforces section 8. It is expected to fail on performance until section 8's open item is fixed.
@@ -421,13 +425,19 @@ The full test plan is in **`TESTING.md`**.
   - Ramps the form endpoint to 200 requests per second.
   - Asserts 429 behaviour and p95 under 500 ms.
   - Static pages get only a CDN smoke check.
-- **CI (GitHub Actions, `.github/workflows/ci.yml`, done):**
+- **CI (GitHub Actions, `.github/workflows/ci.yml`; reworked 17 Nov 2026, not yet run on GitHub):**
+  - **Why it never ran:** the app, and so `.github/`, sat in a `Frontend/` subfolder of the git repo. GitHub only reads `.github/workflows/` at the repo root. Everything was moved up to the root (section 1). Keep it there.
   - `quality` (lint, `format:check`, `npm audit --omit=dev --audit-level=high`) and `test` (`test:coverage` + `test:scripts`) run in parallel. `build` and `e2e` run only if both pass.
-  - `e2e`: `npm run e2e:build`, then Playwright (non-visual) on Chrome. Both deploy jobs need `build` **and** `e2e`.
-  - `lighthouse`: `npm run lhci` on the `site` artifact. It is a required check in branch protection, but deploys don't wait for it, because performance isn't yet at target (section 8).
-  - `build`: strict production build (`NYX_STRICT=true`, values from GitHub repo **variables**), then `npm run verify:dist` (`scripts/verify-dist.mjs`: routes exist; no `%NYX_` tokens, `nyx.example`, localhost or source maps; security headers and hashed CSP present). Uploads `dist/nyx/browser` as an artifact.
-  - `deploy-preview` (same-repo PRs): Cloudflare Pages branch `pr-<number>`, then a smoke test. `deploy-production` (push to `main`): the `production` GitHub environment (add required reviewers for approval), then a smoke test of routes and security headers.
+  - `e2e`: `npm run e2e:build`, then Playwright (non-visual) on Chrome. Both deploy jobs need `build` **and** `e2e`. `scripts/e2e-build.mjs` calls `set-env.mjs` **without** `--production`: that flag only adds the placeholder check, which always failed under `CI=true` because this build has no Turnstile key by design. `environment.ts` still gets `production: true`.
+  - `lighthouse`: `npm run lhci` on the `site` artifact. It is a required check in branch protection, but deploys don't wait for it, because performance isn't yet at target (section 8). **It is still expected to fail on the performance score**, which turns the workflow run red even when everything else passes. Not yet decided how to handle that (options: fix performance, or make the score and LCP assertions `warn` until section 8 is closed).
+  - `build`: strict production build (`NYX_STRICT=true`), then `npm run verify:dist` (`scripts/verify-dist.mjs`: routes exist; no `%NYX_` tokens, `nyx.example`, localhost or source maps; security headers and hashed CSP present). Uploads `dist/nyx/browser` as an artifact.
+    - **Config is all-or-nothing on the `NYX_SITE_URL` repo variable.** Set: every `NYX_*` value comes from GitHub repo **variables** and the job outputs `deployable=true`. Not set: the job uses stand-in values on `.invalid` domains (plus Cloudflare's public Turnstile test key), warns in the run summary and outputs `deployable=false`. This keeps the build, budgets and `verify:dist` gating every change before the club's real details exist.
+    - A half-configured repo (site URL set, something else missing) fails the strict check rather than mixing real and fake values.
+    - **Not yet run:** the stand-in build and `verify:dist` have not been run locally or on GitHub.
+  - `deploy-preview` (same-repo PRs): Cloudflare Pages branch `pr-<number>`, then a smoke test. `deploy-production` (push to `main`): the `production` GitHub environment (add required reviewers for approval), then a smoke test of routes and security headers. **Both are skipped, not failed, unless `deployable == 'true'` and the `CF_PAGES_PROJECT` variable is set**, so stand-in values can never be deployed.
   - Deploys use `wrangler pages deploy` with the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets and the `CF_PAGES_PROJECT` variable. Turn off Cloudflare's own Git build so the site doesn't deploy twice.
+  - The Lighthouse report upload sets `include-hidden-files: true`; `upload-artifact` skips dot-folders such as `.lighthouseci/` otherwise.
+  - Once real `NYX_CF_ANALYTICS_TOKEN` is set, the analytics beacon loads on first render, which will trip Lighthouse's `third-party:count ≤ 0` assertion. Revisit that assertion then.
   - Dependabot (`.github/dependabot.yml`) opens weekly update PRs for npm packages and Actions.
 
 ## 15. Definition of done (every step)
@@ -454,6 +464,9 @@ The full test plan is in **`TESTING.md`**.
 | 8 | Incremental hydration for below-the-fold sections | Less JS work at load; blocking time fell in testing |
 | 9 | CSP script hashes generated post-build, not `autoCsp` | `autoCsp` is incompatible with prerendering; hashes avoid `'unsafe-inline'` |
 | 10 | WebP only, via a static `IMAGE_LOADER` | Universal support, no image CDN needed. Add AVIF via `<picture>` later only if measurements justify it |
+| 11 | The app lives at the git repo root, not in `Frontend/` (17 Nov 2026) | User's choice. It also fixed CI: GitHub ignores workflows outside the root `.github/` |
+| 12 | CI builds with stand-in config until the `NYX_*` repo variables exist, and skips deploys | The club's real details don't exist yet. A build that can only fail gates nothing; stand-ins on `.invalid` domains can't be mistaken for real values or deployed |
+| 13 | The e2e build skips the production placeholder check | It is never deployed and has no Turnstile key by design, so the check could only fail in CI |
 
 ## 17. Assets
 

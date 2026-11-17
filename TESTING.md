@@ -15,7 +15,9 @@ What is tested, at which layer, and how to run it. The standing rules are in `CL
 | Load (form endpoint) | k6 | `load/tour.k6.js` | before launch, against staging | `k6 run -e TOUR_ENDPOINT=… load/tour.k6.js` |
 | Deployed site | curl smoke test | `.github/workflows/ci.yml` | after each deploy | automatic |
 
-**Coverage targets** (enforced in `angular.json`): 85% of statements, 85% of lines, 85% of functions and 80% of branches. Current coverage: 97.5% of statements and 95.2% of branches.
+**Coverage targets** (enforced in `angular.json`): 85% of statements, 85% of lines, 85% of functions and 80% of branches. Current coverage (17 Nov 2026): 98.2% of statements, 97.0% of branches, 95.4% of functions and 99.2% of lines.
+
+All commands run from the git repo root. The app used to sit in a `Frontend/` subfolder; it was moved up on 17 Nov 2026 because GitHub only reads `.github/workflows/` at the root, so CI had never run.
 
 ## What each layer covers
 
@@ -34,7 +36,7 @@ What is tested, at which layer, and how to run it. The standing rules are in `CL
 
 ### Build scripts (35 tests)
 
-- `set-env.mjs`: `.env` versus host variables; defaults; only public keys are written; placeholders warn locally and **fail in CI**.
+- `set-env.mjs`: `.env` versus host variables; defaults; only public keys are written; placeholders warn locally and **fail in CI** (with `--production`, which the e2e build does not pass).
 - `inject-dist.mjs`: tokens filled; the form origin is added to `connect-src`; idempotent.
 - `csp-hashes.mjs`: every inline script is hashed; JSON-LD is skipped; handlers go behind `'unsafe-hashes'`; never `'unsafe-inline'`; idempotent.
 
@@ -50,14 +52,45 @@ What is tested, at which layer, and how to run it. The standing rules are in `CL
 
 The e2e suite runs against `dist/e2e`, a production build whose form endpoint is a fake host (`forms.nyx.test`). Every test intercepts that endpoint, and the fixture blocks all other external requests and fails the test on any console error.
 
+`npm run e2e:build` does not run the production placeholder check (`set-env.mjs --production`). That check fails under `CI=true` when values are placeholders, and this build has no Turnstile key by design, so it could never pass in CI. The build is never deployed. `environment.ts` is still written with `production: true`.
+
+## Results of the first full run (17 Nov 2026)
+
+Run locally on Windows with `CI=true`, Chrome, 4 workers and no retries. Nothing has run on GitHub yet.
+
+| Layer | Result |
+|---|---|
+| Lint, format check, `npm audit` (runtime deps, high and above) | Pass |
+| Unit and component | 273 of 273 pass |
+| Build scripts | 35 of 35 pass |
+| End-to-end, non-visual | 276 pass, 4 fail, 4 skipped, of 284 |
+| Production build with CI stand-in config, `verify:dist` | **Not run** |
+| Lighthouse CI | **Not run** |
+
+The 4 failures are 2 tests, each failing on mobile and tablet. Both are intermittent:
+
+1. **`performance.spec.ts`, "below-the-fold sections hydrate only when scrolled to".** Failed 5 of 9 repeats, on all three viewports. The test is wrong, not the site.
+   - `scrollThrough` moves half a viewport every 60 ms, then the test asserts at once. `waitForLoadState('networkidle')` returns immediately because that state was already reached. The assertion races the IntersectionObserver that triggers hydration.
+   - Measured with an instrumented copy of the test: at 60 ms per step, only the Facilities chunk loaded, and sometimes nothing. At 400 ms per step, Facilities, Training, Membership and the tour form each loaded in order, at their own scroll position (1.4, 6.5, 8.3 and 11.2 viewport heights).
+   - The Club chunk loads at the top of the page without scrolling. Its host element starts exactly at the fold (the hero is `100svh`), and an edge-touching element counts as intersecting.
+   - **Fix (not done):** scroll one far section into view, then `expect.poll(() => chunks.size).toBeGreaterThan(atTop)`.
+2. **`tour-form.spec.ts`, "Enquire on Eclipse pre-fills the form and sends the tier".** Failed once on mobile and once on tablet in the full run: the click was delivered, but the URL stayed at `/` instead of `/#visit`. It then passed 27 of 27 with 2 workers. Dusk and Nocturne never failed.
+   - **Cause not established.** The link sits in a `hydrate on viewport` block and the test clicks straight after scrolling to it. A click lost between event capture and replay, under CPU load, would fit, and that would be a real bug on the enquiry path.
+   - **To do:** repeat under load with tracing on, and read the trace.
+
+CI retries each test twice, so both can still turn the `e2e` job red until they are fixed. The `scrollThrough` helper's comment says it hydrates every `@defer` block; at 60 ms per step it does not.
+
 ## Defects these tests found
 
 - **The time-slot radios were not a group.** They had no `name`, so arrow keys didn't move between them and screen readers announced each one as "1 of 1". Fixed in `tour-form.ts`.
 
 ## Gaps and limits
 
-- **Not run yet:** the Playwright suite (written and type-checked, 300 tests), the visual baselines (generate with `npm run e2e:visual -- -u`), Lighthouse CI and k6.
-- Lighthouse performance is expected to fail locally at 72–89 against the 95 target (CLAUDE.md §8). Measure on the deployed CDN.
+- **Not run yet:** the GitHub Actions workflow itself, the production build with CI stand-in config plus `verify:dist`, the visual baselines (generate with `npm run e2e:visual -- -u`), Lighthouse CI and k6.
+- **Linux is unverified.** Every result above is from Windows. CI runs on `ubuntu-latest`; the lockfile does include the Linux native packages (sharp, lightningcss, Tailwind oxide, rolldown, esbuild).
+- **Two intermittent e2e tests are open** (see the results section above).
+- Lighthouse performance is expected to fail at 72–89 against the 95 target (CLAUDE.md §8), which turns the workflow run red. Measure on the deployed CDN. How CI should treat it until then is undecided.
+- When a real `NYX_CF_ANALYTICS_TOKEN` is set, the analytics beacon will trip Lighthouse's `third-party:count ≤ 0` assertion.
 - k6 needs the real form endpoint's staging URL. That endpoint is outside this repo.
 - Turnstile is not tested end to end, because it can't run against a fake domain. Test it manually on the preview deploy.
 - Error tracking (Sentry) does not exist yet, so there is nothing to test.

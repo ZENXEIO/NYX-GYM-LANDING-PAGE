@@ -24,7 +24,11 @@ const step = (label, args, stepEnv = env) => {
 
 const ng = 'node_modules/@angular/cli/bin/ng.js';
 try {
-  step('environment', ['scripts/set-env.mjs', '--production']) &&
+  // No `--production` here: that flag only adds the deploy-readiness check
+  // (placeholder values fail when CI=true). This build is never deployed and
+  // deliberately has no Turnstile key, so the check would always fail in CI.
+  // environment.ts is still written with `production: true`.
+  step('environment', ['scripts/set-env.mjs']) &&
     step('build', [ng, 'build', `--output-path=${OUT}`]) &&
     step('fill tokens', ['scripts/inject-dist.mjs']) &&
     step('csp hashes', ['scripts/csp-hashes.mjs']);

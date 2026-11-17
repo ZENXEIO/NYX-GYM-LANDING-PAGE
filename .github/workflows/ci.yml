@@ -8,13 +8,23 @@
 # Nothing builds or deploys unless lint, format check, type check and every
 # unit test pass first. Deploys also wait for the Playwright suite.
 #
-# One-time setup (GitHub → Settings):
-#   Secrets  CLOUDFLARE_API_TOKEN   (Pages: Edit permission only)
-#            CLOUDFLARE_ACCOUNT_ID
-#   Variables (public values, see .env.example):
+# This file must stay in `.github/workflows/` at the ROOT of the git repo.
+# GitHub ignores workflows anywhere else, so the pipeline silently never runs.
+#
+# The pipeline is green on a repo with no settings at all: until the NYX_*
+# variables exist, `build` uses stand-in values (clearly fake, `.invalid`
+# domains) to prove the site builds, and both deploy jobs are skipped.
+# Deploys switch on by themselves once the settings below are added.
+#
+# One-time setup (GitHub → Settings → Secrets and variables → Actions):
+#   Variables (public values, see .env.example). Setting NYX_SITE_URL turns on
+#   the real, strict build, so set all of these together:
 #            NYX_SITE_URL, NYX_TOUR_ENDPOINT, NYX_TURNSTILE_SITE_KEY,
-#            NYX_CF_ANALYTICS_TOKEN, NYX_PHONE, NYX_PHONE_DISPLAY,
-#            NYX_EMAIL, NYX_INSTAGRAM_URL, CF_PAGES_PROJECT
+#            NYX_CF_ANALYTICS_TOKEN (optional), NYX_PHONE, NYX_PHONE_DISPLAY,
+#            NYX_EMAIL, NYX_INSTAGRAM_URL
+#   Deploy:  variable CF_PAGES_PROJECT, plus the secrets
+#            CLOUDFLARE_API_TOKEN   (Pages: Edit permission only)
+#            CLOUDFLARE_ACCOUNT_ID
 #   Environments  "preview" and "production" (add required reviewers to
 #                 production for a manual approval before go-live)
 #   Branch protection on main: require the "quality", "test", "build", "e2e"
@@ -85,17 +95,12 @@ jobs:
     needs: [quality, test]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      # 'true' only when the artifact was built from the real repo variables.
+      deployable: ${{ steps.config.outputs.deployable }}
     env:
       # Placeholder or missing values fail the build (scripts/set-env.mjs).
       NYX_STRICT: 'true'
-      NYX_SITE_URL: ${{ vars.NYX_SITE_URL }}
-      NYX_TOUR_ENDPOINT: ${{ vars.NYX_TOUR_ENDPOINT }}
-      NYX_TURNSTILE_SITE_KEY: ${{ vars.NYX_TURNSTILE_SITE_KEY }}
-      NYX_CF_ANALYTICS_TOKEN: ${{ vars.NYX_CF_ANALYTICS_TOKEN }}
-      NYX_PHONE: ${{ vars.NYX_PHONE }}
-      NYX_PHONE_DISPLAY: ${{ vars.NYX_PHONE_DISPLAY }}
-      NYX_EMAIL: ${{ vars.NYX_EMAIL }}
-      NYX_INSTAGRAM_URL: ${{ vars.NYX_INSTAGRAM_URL }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -103,6 +108,57 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Real values when the repo variables are set; otherwise stand-ins, so
+      # the build, bundle budgets and verify:dist still gate every change
+      # before the club's real details exist. It is all-or-nothing on
+      # NYX_SITE_URL: a half-configured repo fails the strict check below
+      # rather than shipping a mix of real and fake values.
+      - name: Resolve build config
+        id: config
+        shell: bash
+        env:
+          SITE_URL: ${{ vars.NYX_SITE_URL }}
+          TOUR_ENDPOINT: ${{ vars.NYX_TOUR_ENDPOINT }}
+          TURNSTILE_SITE_KEY: ${{ vars.NYX_TURNSTILE_SITE_KEY }}
+          CF_ANALYTICS_TOKEN: ${{ vars.NYX_CF_ANALYTICS_TOKEN }}
+          PHONE: ${{ vars.NYX_PHONE }}
+          PHONE_DISPLAY: ${{ vars.NYX_PHONE_DISPLAY }}
+          EMAIL: ${{ vars.NYX_EMAIL }}
+          INSTAGRAM_URL: ${{ vars.NYX_INSTAGRAM_URL }}
+        run: |
+          if [ -n "$SITE_URL" ]; then
+            {
+              echo "NYX_SITE_URL=$SITE_URL"
+              echo "NYX_TOUR_ENDPOINT=$TOUR_ENDPOINT"
+              echo "NYX_TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY"
+              echo "NYX_CF_ANALYTICS_TOKEN=$CF_ANALYTICS_TOKEN"
+              echo "NYX_PHONE=$PHONE"
+              echo "NYX_PHONE_DISPLAY=$PHONE_DISPLAY"
+              echo "NYX_EMAIL=$EMAIL"
+              echo "NYX_INSTAGRAM_URL=$INSTAGRAM_URL"
+            } >> "$GITHUB_ENV"
+            echo "deployable=true" >> "$GITHUB_OUTPUT"
+            echo "Using the repository's NYX_* variables."
+          else
+            {
+              echo "NYX_SITE_URL=https://nyx-ci.invalid"
+              echo "NYX_TOUR_ENDPOINT=https://forms.nyx-ci.invalid/tour"
+              # Cloudflare's published "always passes" Turnstile test key.
+              echo "NYX_TURNSTILE_SITE_KEY=1x00000000000000000000AA"
+              echo "NYX_CF_ANALYTICS_TOKEN="
+              echo "NYX_PHONE=+919000000000"
+              echo "NYX_PHONE_DISPLAY=+91 90000 00000"
+              echo "NYX_EMAIL=ci@nyx-ci.invalid"
+              echo "NYX_INSTAGRAM_URL=https://instagram.com/nyx-ci-stand-in"
+            } >> "$GITHUB_ENV"
+            echo "deployable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Built with stand-in config::NYX_SITE_URL is not set in the repository variables, so this build uses stand-in values and will not be deployed. See the setup notes at the top of .github/workflows/ci.yml."
+            {
+              echo "### Built with stand-in config"
+              echo "The \`NYX_*\` repository variables are not set, so this artifact proves the site builds but **is not deployable**. Both deploy jobs are skipped."
+              echo "Add the variables listed at the top of \`.github/workflows/ci.yml\` to switch on real builds and deploys."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       # ng build enforces the bundle budgets in angular.json; postbuild fills
       # tokens and writes CSP hashes.
       - run: npm run build
@@ -160,13 +216,20 @@ jobs:
         with:
           name: lighthouse
           path: .lighthouseci/
+          # upload-artifact skips dot-folders unless told otherwise.
+          include-hidden-files: true
           retention-days: 14
 
   deploy-preview:
     name: Deploy preview
     needs: [build, e2e]
-    # Fork PRs have no access to secrets.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Fork PRs have no access to secrets. Skipped (not failed) until the real
+    # variables and the Pages project are configured.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.build.outputs.deployable == 'true' &&
+      vars.CF_PAGES_PROJECT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -198,7 +261,13 @@ jobs:
   deploy-production:
     name: Deploy production
     needs: [build, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Skipped (not failed) until the real variables and the Pages project are
+    # configured, so an unconfigured repo never deploys stand-in values.
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.build.outputs.deployable == 'true' &&
+      vars.CF_PAGES_PROJECT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
