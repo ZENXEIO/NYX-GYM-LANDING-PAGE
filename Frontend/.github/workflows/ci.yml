@@ -1,0 +1,241 @@
+# NYX frontend CI/CD (CLAUDE.md §14)
+#
+#   quality ─┬─> build ──────┬─> lighthouse
+#   test   ──┤               ├─> deploy-preview     (pull requests)
+#            └─> e2e ────────┴─> deploy-production  (push to main, gated by the
+#                                                    "production" environment)
+#
+# Nothing builds or deploys unless lint, format check, type check and every
+# unit test pass first. Deploys also wait for the Playwright suite.
+#
+# One-time setup (GitHub → Settings):
+#   Secrets  CLOUDFLARE_API_TOKEN   (Pages: Edit permission only)
+#            CLOUDFLARE_ACCOUNT_ID
+#   Variables (public values, see .env.example):
+#            NYX_SITE_URL, NYX_TOUR_ENDPOINT, NYX_TURNSTILE_SITE_KEY,
+#            NYX_CF_ANALYTICS_TOKEN, NYX_PHONE, NYX_PHONE_DISPLAY,
+#            NYX_EMAIL, NYX_INSTAGRAM_URL, CF_PAGES_PROJECT
+#   Environments  "preview" and "production" (add required reviewers to
+#                 production for a manual approval before go-live)
+#   Branch protection on main: require the "quality", "test", "build", "e2e"
+#   and "lighthouse" checks.
+
+name: Frontend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the older run; never cancel a
+# production deploy half-way.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: '1'
+  NG_CLI_ANALYTICS: 'false'
+
+jobs:
+  quality:
+    name: Lint, format & audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      # Only runtime dependencies ship to users; fail on high/critical issues.
+      - run: npm audit --omit=dev --audit-level=high
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Component + service tests, with coverage thresholds from angular.json.
+      - run: npm run test:coverage
+      # Build scripts: env checks, token filling, CSP hashes.
+      - run: npm run test:scripts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  build:
+    name: Production build
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Placeholder or missing values fail the build (scripts/set-env.mjs).
+      NYX_STRICT: 'true'
+      NYX_SITE_URL: ${{ vars.NYX_SITE_URL }}
+      NYX_TOUR_ENDPOINT: ${{ vars.NYX_TOUR_ENDPOINT }}
+      NYX_TURNSTILE_SITE_KEY: ${{ vars.NYX_TURNSTILE_SITE_KEY }}
+      NYX_CF_ANALYTICS_TOKEN: ${{ vars.NYX_CF_ANALYTICS_TOKEN }}
+      NYX_PHONE: ${{ vars.NYX_PHONE }}
+      NYX_PHONE_DISPLAY: ${{ vars.NYX_PHONE_DISPLAY }}
+      NYX_EMAIL: ${{ vars.NYX_EMAIL }}
+      NYX_INSTAGRAM_URL: ${{ vars.NYX_INSTAGRAM_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # ng build enforces the bundle budgets in angular.json; postbuild fills
+      # tokens and writes CSP hashes.
+      - run: npm run build
+      - run: npm run verify:dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/nyx/browser
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e:
+    name: E2E (Playwright + axe)
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chrome
+      # Its own build (dist/e2e) with a fake form endpoint that every test
+      # intercepts, so no request reaches the real form service.
+      - run: npm run e2e:build
+      - run: npx playwright test --grep-invert @visual
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  lighthouse:
+    name: Lighthouse CI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/download-artifact@v5
+        with:
+          name: site
+          path: dist/nyx/browser
+      # Budgets from CLAUDE.md §8, asserted in lighthouserc.json.
+      - run: npm run lhci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse
+          path: .lighthouseci/
+          retention-days: 14
+
+  deploy-preview:
+    name: Deploy preview
+    needs: [build, e2e]
+    # Fork PRs have no access to secrets.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: site
+          path: site
+      - id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=${{ vars.CF_PAGES_PROJECT }} --branch=pr-${{ github.event.pull_request.number }} --commit-hash=${{ github.sha }}
+      - name: Smoke test preview
+        shell: bash
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          url="$URL"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "$url/")
+          echo "GET $url/ -> $code"; test "$code" = "200"
+
+  deploy-production:
+    name: Deploy production
+    needs: [build, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ vars.NYX_SITE_URL }}
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: site
+          path: site
+      - id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=${{ vars.CF_PAGES_PROJECT }} --branch=main --commit-hash=${{ github.sha }}
+      - name: Smoke test production
+        shell: bash
+        env:
+          URL: ${{ vars.NYX_SITE_URL }}
+        run: |
+          set -euo pipefail
+          check() {
+            local path=$1 code
+            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "$URL$path")
+            echo "GET $path -> $code"; test "$code" = "200"
+          }
+          check /
+          check /privacy
+          check /terms
+          check /robots.txt
+          check /sitemap.xml
+          headers=$(curl -sI "$URL/")
+          for h in strict-transport-security content-security-policy x-content-type-options referrer-policy; do
+            echo "$headers" | grep -qi "^$h:" || { echo "Missing header: $h"; exit 1; }
+          done
+          echo "Smoke test passed. Roll back in the Cloudflare Pages dashboard if anything looks wrong."

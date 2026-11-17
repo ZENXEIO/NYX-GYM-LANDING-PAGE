@@ -1,0 +1,29 @@
+# Cloudflare Pages headers (CLAUDE.md §9)
+# script-src is added at build time by scripts/csp-hashes.mjs (hashes of inline scripts).
+#
+# Cache-Control is deliberately NOT set on /*: Pages merges headers from every
+# matching rule (joining duplicates with a comma), which would give hashed JS/CSS
+# "max-age=0, …, max-age=31536000". HTML gets the Pages default instead:
+# "public, max-age=0, must-revalidate".
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self'; frame-src https://www.google.com https://challenges.cloudflare.com; connect-src 'self' https://cloudflareinsights.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/media/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/images/*
+  Cache-Control: public, max-age=2592000
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

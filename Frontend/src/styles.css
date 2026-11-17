@@ -1,0 +1,404 @@
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────────────────────
+   NYX design tokens — source of truth (see CLAUDE.md §4)
+   ───────────────────────────────────────────────────────────── */
+/* `static` emits every token as a CSS variable, so component styles can use var(--…) */
+@theme static {
+  --color-*: initial;
+  --color-basalt: #161a1d;
+  --color-monsoon: #1f2528;
+  --color-plaster: #ede6da;
+  --color-plaster-muted: #a9a398;
+  --color-card: #f6f1e7;
+  --color-ink: #161a1d;
+  --color-ink-muted: #4e4a43;
+  --color-bronze: #b08d57;
+  --color-bronze-light: #c9a774;
+  --color-bronze-deep: #7a5a2e;
+  --color-line: rgb(237 230 218 / 0.14);
+  --color-line-dark: rgb(22 26 29 / 0.16);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Bodoni Moda', ui-serif, Georgia, serif;
+
+  --ease-calm: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1100px;
+}
+
+/* Surface-aware tokens: dark by default, light inside [data-surface='light'] */
+@theme inline {
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-accent: var(--accent);
+  --color-hairline: var(--hairline);
+  --color-placeholder: var(--placeholder);
+}
+
+:root {
+  --fg: var(--color-plaster);
+  --fg-muted: var(--color-plaster-muted);
+  --accent: var(--color-bronze);
+  --accent-hover: var(--color-bronze-light);
+  --hairline: var(--color-line);
+  --placeholder: #1c2124;
+  color-scheme: dark;
+}
+
+[data-surface='light'] {
+  --fg: var(--color-ink);
+  --fg-muted: var(--color-ink-muted);
+  --accent: var(--color-bronze-deep);
+  --accent-hover: #5f4522;
+  --hairline: var(--color-line-dark);
+  --placeholder: #e2d9c8;
+  color-scheme: light;
+}
+
+/* ─── Type scale & layout utilities ─────────────────────────── */
+@utility text-hero {
+  font-family: var(--font-sans);
+  font-size: clamp(2.75rem, 1.2rem + 6.6vw, 8rem);
+  font-weight: 600;
+  font-stretch: 118%;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+@utility text-h2 {
+  font-family: var(--font-sans);
+  font-size: clamp(2.125rem, 1.3rem + 3.4vw, 4.5rem);
+  font-weight: 600;
+  font-stretch: 118%;
+  line-height: 1.02;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+@utility text-h3 {
+  font-family: var(--font-sans);
+  font-size: clamp(1.375rem, 1.15rem + 0.8vw, 1.875rem);
+  font-weight: 500;
+  font-stretch: 118%;
+  line-height: 1.15;
+}
+@utility text-editorial {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 1.2rem + 3.2vw, 4rem);
+  font-weight: 400;
+  line-height: 1.1;
+}
+@utility text-body-lg {
+  font-size: clamp(1.1875rem, 1.1rem + 0.3vw, 1.3125rem);
+  line-height: 1.55;
+}
+@utility text-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+@utility measure {
+  max-width: 62ch;
+}
+@utility site-container {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: 16px;
+  @media (width >= 768px) {
+    padding-inline: 32px;
+  }
+  @media (width >= 1100px) {
+    padding-inline: 40px;
+  }
+}
+@utility site-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 16px;
+  @media (width >= 768px) {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+}
+@utility section-y {
+  padding-block: clamp(96px, 14vw, 200px);
+}
+
+/* ─── Base ──────────────────────────────────────────────────── */
+@layer base {
+  html {
+    background: var(--color-basalt);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-basalt);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  [data-surface] {
+    color: var(--fg);
+  }
+  ::selection {
+    background: var(--color-bronze);
+    color: var(--color-basalt);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* ─── Named component patterns (CLAUDE.md §7) ───────────────── */
+@layer components {
+  .skip-link {
+    position: fixed;
+    left: 16px;
+    top: 16px;
+    z-index: 100;
+    padding: 12px 20px;
+    background: var(--color-plaster);
+    color: var(--color-ink);
+    border-radius: 2px;
+    transform: translateY(-200%);
+    transition: transform 300ms var(--ease-calm);
+  }
+  .skip-link:focus-visible {
+    transform: none;
+  }
+
+  /* NYX wordmark (header, menu, footer). The negative margin cancels the
+     trailing letter-spacing so the word sits optically centred in its box. */
+  .wordmark {
+    font-weight: 600;
+    font-stretch: 125%;
+    letter-spacing: 0.32em;
+    margin-right: -0.32em;
+  }
+
+  /* Button: 1px accent outline, tracked label, no arrow glyph */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 28px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    color: var(--fg);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition:
+      background-color 900ms var(--ease-calm),
+      border-color 900ms var(--ease-calm);
+  }
+  .btn:hover {
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-color: var(--accent-hover);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: progress;
+  }
+
+  /* Round button that sits in the arch-frame notch */
+  .btn-round {
+    display: inline-grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border: 1px solid var(--accent);
+    border-radius: 9999px;
+    color: var(--fg);
+    transition:
+      border-color 900ms var(--ease-calm),
+      background-color 900ms var(--ease-calm);
+  }
+  .btn-round:hover {
+    border-color: var(--accent-hover);
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  /* Hairline underline that grows from the left */
+  .link-line {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px;
+    transition: background-size 900ms var(--ease-calm);
+  }
+  .link-line:hover,
+  .link-line:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  /* Deco arch: semicircular top + circular notch bottom-right for the round button */
+  .arch-frame {
+    border-top-left-radius: 9999px;
+    border-top-right-radius: 9999px;
+    -webkit-mask: radial-gradient(
+      circle at calc(100% - 28px) calc(100% - 28px),
+      #0000 36px,
+      #000 36.5px
+    );
+    mask: radial-gradient(circle at calc(100% - 28px) calc(100% - 28px), #0000 36px, #000 36.5px);
+  }
+
+  /* Invitation card: cream stock with a double hairline frame */
+  .invitation-frame {
+    position: relative;
+    background: var(--color-card);
+    border: 1px solid var(--color-line-dark);
+  }
+  .invitation-frame::before {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1px solid var(--color-line-dark);
+    pointer-events: none;
+  }
+
+  /* Embossed relief for the monogram */
+  /* No blur radius: blurred shadows on 30–46vw glyphs are very costly to paint */
+  .emboss {
+    color: #191d20;
+    text-shadow:
+      -1px -1px 0 rgb(237 230 218 / 0.07),
+      2px 2px 0 rgb(0 0 0 / 0.5);
+  }
+}
+
+/* ─── Motion (CSS only; CLAUDE.md §4 Motion) ────────────────── */
+@keyframes nyx-dusk {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nyx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nyx-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes nyx-wipe {
+  from {
+    clip-path: inset(16% 0 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes nyx-parallax {
+  from {
+    transform: translateY(-6%) scale(1.14);
+  }
+  to {
+    transform: translateY(6%) scale(1.14);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Hero: one orchestrated sequence. The headline starts almost at once so
+     first paint and LCP aren't held back; the arc and info bar follow. The
+     monogram is not animated: it is often the LCP element. */
+  .hero-media {
+    animation: nyx-dusk 1400ms var(--ease-calm) both;
+  }
+  .hero-line {
+    animation: nyx-rise 1000ms var(--ease-calm) both;
+  }
+  .hero-line:nth-child(1) {
+    animation-delay: 80ms;
+  }
+  .hero-line:nth-child(2) {
+    animation-delay: 200ms;
+  }
+  .hero-line:nth-child(3) {
+    animation-delay: 320ms;
+  }
+  .hero-late {
+    animation: nyx-rise 1200ms var(--ease-calm) 900ms both;
+  }
+  .arc-draw path {
+    stroke-dasharray: 1;
+    animation: nyx-draw 1600ms var(--ease-calm) 700ms both;
+  }
+  .arc-draw circle {
+    animation: nyx-dusk 900ms var(--ease-calm) 2000ms both;
+  }
+
+  /* Photo hover: slow scale */
+  .photo-hover img {
+    transition: scale 1200ms var(--ease-calm);
+  }
+  .photo-hover:hover img {
+    scale: 1.03;
+  }
+
+  /* Scroll-driven reveals where supported */
+  @supports (animation-timeline: view()) {
+    .photo-reveal {
+      animation: nyx-wipe linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+    .photo-reveal .parallax {
+      animation: nyx-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+    .text-reveal {
+      animation: nyx-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+
+  /* IntersectionObserver fallback (reveal directive) */
+  .reveal-pending {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 1200ms var(--ease-calm),
+      transform 1200ms var(--ease-calm);
+  }
+}
