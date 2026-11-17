@@ -29,7 +29,7 @@ import { Reveal } from '../../../shared/reveal';
             [attr.aria-labelledby]="'facility-' + f.id"
           >
             <figure
-              class="photo-reveal photo-hover relative aspect-[3/2] overflow-hidden"
+              class="photo-reveal photo-hover lights-on relative aspect-[3/2] overflow-hidden"
               [class]="odd ? 'md:col-span-7 md:col-start-6' : 'md:col-span-7 md:col-start-1'"
               nyxReveal
             >
@@ -41,7 +41,8 @@ import { Reveal } from '../../../shared/reveal';
               />
             </figure>
             <div
-              class="px-4 md:row-start-1 md:px-0"
+              class="caption-follow px-4 md:row-start-1 md:px-0"
+              nyxReveal
               [class]="
                 odd ? 'md:col-span-4 md:col-start-2' : 'md:col-span-4 md:col-start-9 md:pr-10'
               "

@@ -6,8 +6,9 @@
 /* `static` emits every token as a CSS variable, so component styles can use var(--…) */
 @theme static {
   --color-*: initial;
-  --color-basalt: #161a1d;
-  --color-monsoon: #1f2528;
+  /* Retuned 17 Nov 2026 to the hero photo's edge shadows (CLAUDE.md §17). */
+  --color-basalt: #0e1011;
+  --color-monsoon: #171b1c;
   --color-plaster: #ede6da;
   --color-plaster-muted: #a9a398;
   --color-card: #f6f1e7;
@@ -164,6 +165,13 @@
       scroll-behavior: smooth;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
 }
 
 /* ─── Named component patterns (CLAUDE.md §7) ───────────────── */
@@ -276,15 +284,110 @@
     inset: 7px;
     border: 1px solid var(--color-line-dark);
     pointer-events: none;
+    transition: border-color 1200ms var(--ease-calm);
+  }
+  /* Hover rewards closeness: the inner frame warms to bronze. No lift. */
+  .invitation-frame:hover::before {
+    border-color: var(--color-bronze-deep);
+  }
+  /* Eclipse's seal: an inner frame in bronze-deep over the hairline one.
+     Drawn by scroll where supported (.frame-seal rect); otherwise just there. */
+  .frame-seal {
+    position: absolute;
+    inset: 7px;
+    width: calc(100% - 14px);
+    height: calc(100% - 14px);
+    overflow: visible;
+    pointer-events: none;
+  }
+  .frame-seal rect {
+    fill: none;
+    stroke: var(--color-bronze-deep);
+    stroke-width: 1;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  /* Infinite slider (Testimonials; CLAUDE.md §4, ADR 19). Full bleed,
+     hard edges (no gradient fade). Items carry their gap as a margin so half
+     the track is exactly two copies and the loop never jumps. */
+  .marquee {
+    overflow: hidden;
+  }
+  .marquee-track,
+  .marquee-set {
+    display: flex;
+    width: max-content;
+  }
+  .marquee-item {
+    flex: none;
+    margin-inline-end: var(--marquee-gap, 4rem);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee-track {
+      animation: nyx-marquee var(--marquee-duration, 120s) linear infinite;
+    }
+    .marquee-track.is-reverse {
+      animation-direction: reverse;
+    }
+    /* Pauses while the visitor lingers, and with the pause toggle (WCAG 2.2.2). */
+    .marquee:hover .marquee-track,
+    .marquee:focus-within .marquee-track,
+    .marquee-group:has(.marquee-toggle input:checked) .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* A still row, scrolled by hand. */
+    .marquee {
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-inline: 16px;
+    }
+    .marquee-item {
+      scroll-snap-align: start;
+    }
+    .marquee-clone {
+      display: none;
+    }
+  }
+  /* Pause / Play: a checkbox, so it works with no JavaScript (the section is
+     never hydrated). The visible word swaps; the accessible name stays. */
+  .marquee-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .marquee-toggle:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .marquee-toggle .when-paused,
+  .marquee-toggle:has(input:checked) .when-playing {
+    display: none;
+  }
+  .marquee-toggle:has(input:checked) .when-paused {
+    display: inline;
+  }
+  /* Nothing moves with reduced motion, so there is nothing to pause. */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-toggle {
+      display: none;
+    }
   }
 
   /* Embossed relief for the monogram */
   /* No blur radius: blurred shadows on 30–46vw glyphs are very costly to paint */
+  /* Over the hero photo (CLAUDE.md §4.4, §17): no solid face, so the photo
+     shows through. The two unblurred shadows are full glyph copies: where they
+     overlap the glyph reads as a faint darkening, with a light rim up-left and
+     a dark rim down-right. */
   .emboss {
-    color: #191d20;
+    color: transparent;
     text-shadow:
-      -1px -1px 0 rgb(237 230 218 / 0.07),
-      2px 2px 0 rgb(0 0 0 / 0.5);
+      -1px -1px 0 rgb(237 230 218 / 0.06),
+      2px 2px 0 rgb(0 0 0 / 0.22);
   }
 }
 
@@ -321,6 +424,100 @@
   }
   to {
     clip-path: inset(0);
+  }
+}
+@keyframes nyx-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes nyx-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes nyx-track {
+  from {
+    opacity: 0;
+    letter-spacing: 0.06em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: normal;
+  }
+}
+@keyframes nyx-arch-open {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes nyx-arch-settle {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes nyx-lights {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes nyx-present {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nyx-seal {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes nyx-coach-rise {
+  from {
+    opacity: 0;
+    translate: 0 32px;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
+@keyframes nyx-drift {
+  from {
+    transform: translateY(16px);
+  }
+  to {
+    transform: translateY(-16px);
+  }
+}
+@keyframes nyx-focus {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.95);
+  }
+  57.7% {
+    opacity: 1;
+    transform: none;
   }
 }
 @keyframes nyx-parallax {
@@ -372,14 +569,18 @@
 
   /* Scroll-driven reveals where supported */
   @supports (animation-timeline: view()) {
+    /* Named timelines: an overflow-hidden box is a scroll container, so a
+       plain view() inside it (the photo, the veil) would measure against that
+       box and never move. Inner layers follow the outer frame's timeline. */
     .photo-reveal {
+      view-timeline-name: --photo;
       animation: nyx-wipe linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 70%;
     }
     .photo-reveal .parallax {
       animation: nyx-parallax linear both;
-      animation-timeline: view();
+      animation-timeline: --photo;
       animation-range: cover;
     }
     .text-reveal {
@@ -387,6 +588,140 @@
       animation-timeline: view();
       animation-range: entry 0% entry 40%;
     }
+
+    /* ── Section motion (CLAUDE.md §4 Motion, "Section by section") ──
+       Slow, scroll-scrubbed, one moment per screen. Without scroll timelines
+       or with reduced motion none of this runs and content shows complete. */
+
+    /* A hairline that draws from the left. The element keeps its border-top
+       box; the visible line is the ::before, scaled from 0 to 1. */
+    .rule-draw {
+      position: relative;
+      border-top-color: transparent;
+    }
+    .rule-draw::before {
+      content: '';
+      position: absolute;
+      inset: -1px 0 auto;
+      height: 1px;
+      background: var(--hairline);
+      transform-origin: left;
+      animation: nyx-rule linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 40%;
+    }
+
+    /* Tracking settles: single-line Bodoni (stat, tier names) arrives a touch
+       wide and settles to its resting spacing. Never on wrapping text. */
+    .track-settle {
+      animation: nyx-track linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+    /* Supporting line that waits for the element before it to land. */
+    .after-settle {
+      animation: nyx-dusk linear both;
+      animation-timeline: view();
+      animation-range: entry 90% cover 50%;
+    }
+
+    /* The arch opens from its base to its crown, the photo easing back. */
+    .arch-open .arch-frame {
+      animation: nyx-arch-open linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+    .arch-open {
+      view-timeline-name: --arch;
+    }
+    .arch-open .arch-frame img {
+      animation: nyx-arch-settle linear both;
+      animation-timeline: --arch;
+      animation-range: entry 0% cover 55%;
+    }
+    .arch-open .btn-round {
+      animation: nyx-dusk linear both;
+      animation-timeline: view();
+      animation-range: entry 80% cover 50%;
+    }
+
+    /* Facilities: the room is dim until you reach it, then the lights come on. */
+    .lights-on::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--color-basalt);
+      pointer-events: none;
+      animation: nyx-lights linear both;
+      animation-timeline: --photo;
+      animation-range: entry 10% cover 50%;
+    }
+    /* The caption arrives just after its photo. */
+    .caption-follow {
+      animation: nyx-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 40%;
+    }
+
+    /* Invitations are presented: the card rises into place, its arc draws. */
+    .card-present {
+      animation: nyx-present linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+    .arc-scroll path {
+      stroke-dasharray: 1;
+      animation: nyx-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 35%;
+    }
+    .arc-scroll circle {
+      animation: nyx-dusk linear both;
+      animation-timeline: view();
+      animation-range: cover 30% cover 40%;
+    }
+    /* Eclipse only: the inner frame traces itself, like a seal pressed. */
+    .frame-seal rect {
+      animation: nyx-seal linear both;
+      animation-timeline: view();
+      animation-range: entry 60% cover 50%;
+    }
+
+    @media (min-width: 768px) {
+      /* Coaches rise into the row; the offset column drifts at its own rate. */
+      .coach-rise {
+        animation: nyx-coach-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 40%;
+      }
+      .coach-drift {
+        animation: nyx-drift linear both;
+        animation-timeline: view();
+        animation-range: cover;
+      }
+    }
+    @media (max-width: 767.98px) {
+      /* Phone carousel: the coach in view is at full presence, neighbours
+         recede. Peak at 57.7% of the inline cover range: where a 72%-wide,
+         snap-start card sits once snapped (scroll padding 16px). */
+      .carousel-focus > li {
+        animation: nyx-focus linear both;
+        animation-timeline: view(inline);
+        animation-range: cover;
+      }
+    }
+  }
+
+  /* Timed (not scroll-linked) details */
+  .map-fade {
+    animation: nyx-dusk 1200ms var(--ease-calm) both;
+  }
+
+  /* Route crossfade (Angular view transitions), through basalt. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 900ms;
+    animation-timing-function: var(--ease-calm);
   }
 
   /* IntersectionObserver fallback (reveal directive) */

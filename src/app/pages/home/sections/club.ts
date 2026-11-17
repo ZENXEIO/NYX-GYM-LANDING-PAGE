@@ -24,16 +24,17 @@ import { Reveal } from '../../../shared/reveal';
             }
           </div>
 
-          <div class="border-hairline mt-14 flex items-baseline gap-5 border-t pt-8">
-            <span class="text-editorial text-fg text-[clamp(3.5rem,2.4rem+4vw,6rem)]">{{
-              club.stat.value
-            }}</span>
-            <span class="text-body-lg text-fg-muted">{{ club.stat.caption }}</span>
+          <div class="border-hairline rule-draw mt-14 flex items-baseline gap-5 border-t pt-8">
+            <span
+              class="text-editorial text-fg track-settle text-[clamp(3.5rem,2.4rem+4vw,6rem)]"
+              >{{ club.stat.value }}</span
+            >
+            <span class="text-body-lg text-fg-muted after-settle">{{ club.stat.caption }}</span>
           </div>
         </div>
 
         <nyx-arch-frame
-          class="col-span-4 md:col-span-5 md:col-start-8"
+          class="arch-open col-span-4 md:col-span-5 md:col-start-8"
           [image]="club.image"
           sizes="(min-width: 768px) 38vw, 92vw"
           [action]="{ label: club.action.label, fragment: club.action.fragment, icon: 'down' }"

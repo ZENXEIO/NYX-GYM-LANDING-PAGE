@@ -26,11 +26,24 @@ import { Reveal } from '../../../shared/reveal';
         <ul class="mt-16 grid gap-6 md:mt-24 md:grid-cols-3 md:items-start">
           @for (t of m.tiers; track t.id; let i = $index) {
             <li
-              class="invitation-frame flex flex-col items-center px-8 pt-12 pb-10 text-center md:px-10"
+              class="invitation-frame card-present flex flex-col items-center px-8 pt-12 pb-10 text-center md:px-10"
               [class]="i === 1 ? 'md:mt-12' : ''"
             >
-              <nyx-arc class="w-20" />
-              <h3 class="text-editorial mt-6">{{ t.name }}</h3>
+              @if (t.id === 'eclipse') {
+                <!-- Founding tier only: the inner frame traces itself, like a seal. -->
+                <svg class="frame-seal" aria-hidden="true">
+                  <rect
+                    x="0"
+                    y="0"
+                    width="100%"
+                    height="100%"
+                    pathLength="1"
+                    vector-effect="non-scaling-stroke"
+                  />
+                </svg>
+              }
+              <nyx-arc class="w-20" [scroll]="true" />
+              <h3 class="text-editorial track-settle mt-6">{{ t.name }}</h3>
               <p class="text-label text-accent mt-4">{{ t.tagline }}</p>
               <p class="text-fg-muted mt-6 max-w-[30ch]">{{ t.copy }}</p>
               <ul

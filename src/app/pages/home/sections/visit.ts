@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, afterNextRender, signal } from '@angular/core';
 import { site } from '../../../content/site';
+import { mumbaiNow } from '../../../core/open-status';
 import { MapEmbed } from './map-embed';
 import { TourForm } from './tour-form';
 
@@ -24,9 +25,6 @@ import { TourForm } from './tour-form';
                     <span class="block">{{ line }}</span>
                   }
                 </address>
-                @if (contact.placeholder) {
-                  <span class="text-label text-accent mt-2 block">Placeholder address</span>
-                }
               </dd>
             </div>
             <div>
@@ -50,10 +48,23 @@ import { TourForm } from './tour-form';
               <dd class="mt-3">
                 <ul class="divide-line border-line divide-y border-y">
                   @for (h of hours; track h.days) {
-                    <li class="flex justify-between gap-4 py-3">
-                      <span>{{ h.days }}</span><span class="text-fg-muted tabular-nums">{{
-                        h.time
-                      }}</span>
+                    <li
+                      class="relative flex items-baseline justify-between gap-4 py-3"
+                      [class.is-today]="h.dayNumbers.includes(today())"
+                    >
+                      <span class="flex items-baseline gap-3">
+                        {{ h.days }}
+                        @if (h.dayNumbers.includes(today())) {
+                          <span class="text-label text-accent inline-flex items-center gap-2">
+                            <span
+                              class="live-dot bg-bronze size-1.5 rounded-full"
+                              aria-hidden="true"
+                            ></span>
+                            {{ todayLabel }}
+                          </span>
+                        }
+                      </span>
+                      <span class="text-fg-muted tabular-nums">{{ h.time }}</span>
                     </li>
                   }
                 </ul>
@@ -80,9 +91,61 @@ import { TourForm } from './tour-form';
       </div>
     </section>
   `,
+  styles: `
+    /* Today's row: a bronze marker grows down its left edge (CLAUDE.md §4). */
+    .is-today::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 12px;
+      bottom: 12px;
+      width: 1px;
+      background: var(--color-bronze);
+      transform-origin: top;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .is-today::before {
+        animation: today-mark 1400ms var(--ease-calm) both;
+      }
+      @supports (animation-timeline: view()) {
+        .is-today::before {
+          animation: today-mark linear both;
+          animation-timeline: view();
+          animation-range: entry 40% cover 40%;
+        }
+      }
+      /* The same slow breath as the hero's "open now" dot. */
+      .live-dot {
+        animation: today-breathe 2400ms var(--ease-calm) infinite alternate;
+      }
+    }
+    @keyframes today-mark {
+      from {
+        transform: scaleY(0);
+      }
+      to {
+        transform: none;
+      }
+    }
+    @keyframes today-breathe {
+      from {
+        opacity: 0.35;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  `,
 })
 export class Visit {
   protected readonly v = site.visit;
   protected readonly contact = site.contact;
   protected readonly hours = site.hours;
+  protected readonly todayLabel = site.status.today;
+  /** Mumbai day of the week; -1 until the browser renders (prerendered HTML marks no day). */
+  protected readonly today = signal(-1);
+
+  constructor() {
+    afterNextRender(() => this.today.set(mumbaiNow(new Date()).day));
+  }
 }

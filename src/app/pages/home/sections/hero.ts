@@ -1,23 +1,25 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   afterNextRender,
+  inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { site } from '../../../content/site';
-import { Arc } from '../../../shared/arc';
+import { openStatus } from '../../../core/open-status';
 import { Photo } from '../../../shared/photo';
 
 /**
  * Hero: full-bleed image/video melting into basalt, embossed monogram,
- * stacked uppercase headline, one CTA with the arc, and the info bar.
+ * stacked uppercase headline and the info bar. No CTA button or arc here
+ * (removed at the user's request); "Book a tour" lives in the header.
  */
 @Component({
   selector: 'nyx-hero',
-  imports: [Photo, Arc, RouterLink],
+  imports: [Photo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section
@@ -68,10 +70,9 @@ import { Photo } from '../../../shared/photo';
             <span class="hero-line block">{{ line }}</span>
           }
         </h1>
-        <div class="hero-late mt-10 flex flex-wrap items-center gap-x-6 gap-y-6 md:mt-12">
-          <nyx-arc class="w-24 md:w-28" [draw]="true" />
-          <a routerLink="/" fragment="visit" class="btn">{{ hero.cta }}</a>
-          @if (showVideo()) {
+        <!-- Pause control for the optional hero video (CLAUDE.md §11). -->
+        @if (showVideo()) {
+          <div class="hero-late mt-10 md:mt-12">
             <button
               type="button"
               class="text-label link-line text-plaster-muted min-h-11"
@@ -79,8 +80,8 @@ import { Photo } from '../../../shared/photo';
             >
               {{ paused() ? hero.film.play : hero.film.pause }}
             </button>
-          }
-        </div>
+          </div>
+        }
       </div>
 
       <!-- Info bar -->
@@ -90,7 +91,12 @@ import { Photo } from '../../../shared/photo';
             class="text-label border-line text-plaster-muted flex h-12 items-center justify-between gap-4 rounded-[4px] border px-4 md:h-14 md:px-6"
           >
             <li>{{ site.contact.area }}</li>
-            <li class="border-line hidden border-x px-8 md:block">{{ site.hoursShort }}</li>
+            <li class="border-line hidden items-center gap-3 border-x px-8 md:flex">
+              @if (status().open) {
+                <span class="live-dot bg-bronze size-1.5 rounded-full" aria-hidden="true"></span>
+              }
+              <span>{{ status().text }}</span>
+            </li>
             <li>
               <a
                 class="link-line text-plaster"
@@ -108,8 +114,50 @@ import { Photo } from '../../../shared/photo';
   styles: `
     .hero-fade {
       background:
-        linear-gradient(to top, var(--color-basalt) 0%, rgb(22 26 29 / 0.55) 30%, transparent 60%),
-        linear-gradient(to right, rgb(22 26 29 / 0.7) 0%, transparent 55%);
+        linear-gradient(
+          to top,
+          var(--color-basalt) 0%,
+          color-mix(in srgb, var(--color-basalt) 55%, transparent) 30%,
+          transparent 60%
+        ),
+        linear-gradient(
+          to right,
+          color-mix(in srgb, var(--color-basalt) 70%, transparent) 0%,
+          transparent 55%
+        );
+    }
+    /* Local scrim (CLAUDE.md §11, §17): on phones the headline sits over the
+       barbell's chrome highlight, which measured 3.5:1. The taller fade lifts
+       it to at least 5.7:1 from 360 to 414px wide. */
+    @media (max-width: 767.98px) {
+      .hero-fade {
+        background:
+          linear-gradient(
+            to top,
+            var(--color-basalt) 0%,
+            color-mix(in srgb, var(--color-basalt) 70%, transparent) 35%,
+            transparent 70%
+          ),
+          linear-gradient(
+            to right,
+            color-mix(in srgb, var(--color-basalt) 70%, transparent) 0%,
+            transparent 55%
+          );
+      }
+    }
+    /* A slow breath on the "open now" dot: the one live detail in the hero. */
+    @media (prefers-reduced-motion: no-preference) {
+      .live-dot {
+        animation: live-breathe 2400ms var(--ease-calm) infinite alternate;
+      }
+    }
+    @keyframes live-breathe {
+      from {
+        opacity: 0.35;
+      }
+      to {
+        opacity: 1;
+      }
     }
   `,
 })
@@ -118,16 +166,25 @@ export class Hero {
   protected readonly hero = site.hero;
   protected readonly showVideo = signal(false);
   protected readonly paused = signal(false);
+  /** Prerendered as the static line; replaced by the live one in the browser. */
+  protected readonly status = signal({ open: false, text: site.hoursShort });
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
 
   constructor() {
-    // Video only in the browser, on wide screens, with motion allowed (CLAUDE.md §8).
+    const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
+      // Video only in the browser, on wide screens, with motion allowed (CLAUDE.md §8).
       const ok =
         !!this.hero.video &&
         matchMedia('(min-width: 1100px)').matches &&
         !matchMedia('(prefers-reduced-motion: reduce)').matches;
       this.showVideo.set(ok);
+
+      // Live opening status, refreshed every minute.
+      const tick = () => this.status.set(openStatus(new Date()));
+      tick();
+      const timer = setInterval(tick, 60_000);
+      destroyRef.onDestroy(() => clearInterval(timer));
     });
   }
 

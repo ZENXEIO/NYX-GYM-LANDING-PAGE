@@ -13,33 +13,35 @@ import { Visit } from './sections/visit';
   selector: 'nyx-home',
   imports: [Hero, Club, Facilities, Training, Membership, Testimonials, Visit],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // Below the fold, sections are prerendered as HTML but only hydrate (load
-  // their JS) when scrolled into view. Early clicks are replayed by event replay.
-  // Testimonials are static, so they never hydrate. Placeholders only show on
-  // client-side navigation back to the homepage.
+  // On first load, below-the-fold sections are prerendered as HTML and only
+  // hydrate (load their JS) when scrolled into view ("hydrate on viewport").
+  // Early clicks are replayed by event replay. Testimonials never hydrate.
+  // "on immediate" applies only when the homepage is reached by client-side
+  // navigation (e.g. the menu from /privacy): every section renders straight
+  // away, so a jump to #membership lands without the page shifting under it.
   template: `
     <nyx-hero />
-    @defer (on viewport; hydrate on viewport) {
+    @defer (on immediate; hydrate on viewport) {
       <nyx-club />
     } @placeholder {
       <div class="bg-plaster min-h-svh"></div>
     }
-    @defer (on viewport; hydrate on viewport) {
+    @defer (on immediate; hydrate on viewport) {
       <nyx-facilities />
     } @placeholder {
       <div class="min-h-svh"></div>
     }
-    @defer (on viewport; hydrate on viewport) {
+    @defer (on immediate; hydrate on viewport) {
       <nyx-training />
     } @placeholder {
       <div class="bg-monsoon min-h-svh"></div>
     }
-    @defer (on viewport; hydrate on viewport) {
+    @defer (on immediate; hydrate on viewport) {
       <nyx-membership />
     } @placeholder {
       <div class="bg-plaster min-h-svh"></div>
     }
-    @defer (on viewport; hydrate never) {
+    @defer (on immediate; hydrate never) {
       <nyx-testimonials />
     } @placeholder {
       <div class="min-h-[50svh]"></div>

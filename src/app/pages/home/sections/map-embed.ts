@@ -10,7 +10,7 @@ import { site } from '../../../content/site';
   template: `
     @if (loaded()) {
       <iframe
-        class="absolute inset-0 h-full w-full grayscale hue-rotate-180 invert-[0.9]"
+        class="map-fade absolute inset-0 h-full w-full grayscale hue-rotate-180 invert-[0.9]"
         [src]="url()"
         [title]="'Map showing ' + query()"
         loading="lazy"

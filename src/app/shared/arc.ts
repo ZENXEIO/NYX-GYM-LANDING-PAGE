@@ -18,7 +18,8 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
 
 /**
  * The signature bronze arc: Marine Drive's curve with its string of lights.
- * Used only in the hero and on membership invitations (CLAUDE.md §4).
+ * Used on the membership invitations, the footer invitation card and the tour
+ * form's success message (CLAUDE.md §4).
  */
 @Component({
   selector: 'nyx-arc',
@@ -31,6 +32,7 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
       aria-hidden="true"
       class="block h-auto w-full"
       [class.arc-draw]="draw()"
+      [class.arc-scroll]="scroll()"
     >
       <path
         d="M2 36 Q60 -10 118 36"
@@ -46,7 +48,9 @@ const LIGHTS = [0.14, 0.26, 0.38, 0.5, 0.62, 0.74, 0.86].map((t) => {
   `,
 })
 export class Arc {
-  /** Draw the line once on page load (hero only). */
+  /** Draw the line once, when it appears (the tour form's success message). */
   readonly draw = input(false);
+  /** Draw the line as the arc scrolls into view (membership invitations). */
+  readonly scroll = input(false);
   protected readonly lights = LIGHTS;
 }

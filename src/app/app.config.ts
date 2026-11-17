@@ -2,7 +2,13 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { IMAGE_CONFIG, IMAGE_LOADER, ImageLoaderConfig } from '@angular/common';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideClientHydration, withIncrementalHydration } from '@angular/platform-browser';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
 import { routes } from './app.routes';
 
 /** Widths produced by scripts/optimize-images.mjs. */
@@ -14,6 +20,11 @@ export function nyxImageLoader({ src, width }: ImageLoaderConfig): string {
   return `${src}-${w}.webp`;
 }
 
+/** The deepest active route: the page being shown. */
+function leaf(s: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
+  return s.firstChild ? leaf(s.firstChild) : s;
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -21,6 +32,14 @@ export const appConfig: ApplicationConfig = {
       routes,
       withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }),
       withComponentInputBinding(),
+      // Crossfade between pages (styles.css). Same-page jumps (/#visit from the
+      // homepage) skip it, so in-page scrolling is never replaced by a fade.
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: ({ transition, from, to }) => {
+          if (leaf(from).routeConfig === leaf(to).routeConfig) transition.skipTransition();
+        },
+      }),
     ),
     provideClientHydration(withIncrementalHydration()),
     provideHttpClient(withFetch()),

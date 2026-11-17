@@ -15,6 +15,7 @@ import { EnquiryState } from '../../../core/enquiry.state';
 import { TourApiService, TourField } from '../../../core/tour-api.service';
 import { site } from '../../../content/site';
 import { environment } from '../../../../environments/environment';
+import { Arc } from '../../../shared/arc';
 import { indianMobile, normalisePhone, notInPast, todayIso } from './tour-form.validators';
 
 type Status = 'idle' | 'sending' | 'success' | 'rate-limited' | 'unavailable';
@@ -44,15 +45,17 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
 /** Tour booking form (CLAUDE.md §10). */
 @Component({
   selector: 'nyx-tour-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, Arc],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="border-line bg-monsoon/60 border p-6 md:p-10">
       <h3 id="tour-form-title" class="text-h3">{{ copy.heading }}</h3>
 
       @if (status() === 'success') {
-        <div class="mt-8" role="status">
-          <p class="text-body-lg">{{ copy.success }}</p>
+        <div class="success-in mt-8" role="status">
+          <!-- The one celebratory moment: the bronze arc draws itself. -->
+          <nyx-arc class="w-16" [draw]="true" />
+          <p class="text-body-lg mt-6">{{ copy.success }}</p>
           <button type="button" class="btn mt-8" (click)="startAgain()">
             {{ copy.startAgain }}
           </button>
@@ -159,7 +162,12 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
 
           <div>
             <label for="tour-interest" class="text-label text-fg-muted">Interested in</label>
-            <select id="tour-interest" class="field appearance-none" formControlName="interest">
+            <select
+              #interestSelect
+              id="tour-interest"
+              class="field appearance-none"
+              formControlName="interest"
+            >
               @for (i of copy.interests; track i.value) {
                 <option [value]="i.value">{{ i.label }}</option>
               }
@@ -199,7 +207,18 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
             class="btn mt-2 w-full md:w-auto md:self-start"
             [disabled]="status() === 'sending'"
           >
-            {{ status() === 'sending' ? copy.sending : copy.submit }}
+            <span class="label-stack">
+              <span
+                [class.is-hidden]="status() === 'sending'"
+                [attr.aria-hidden]="status() === 'sending'"
+                >{{ copy.submit }}</span
+              >
+              <span
+                [class.is-hidden]="status() !== 'sending'"
+                [attr.aria-hidden]="status() !== 'sending'"
+                >{{ copy.sending }}</span
+              >
+            </span>
           </button>
         </form>
       }
@@ -217,6 +236,19 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
       border-radius: 2px;
       color: var(--color-plaster);
       transition: border-color 600ms var(--ease-calm);
+    }
+    /* Focus: a bronze hairline grows along the bottom, like the link underline. */
+    input.field {
+      background-image: linear-gradient(var(--color-bronze), var(--color-bronze));
+      background-size: 0% 1px;
+      background-position: 0 100%;
+      background-repeat: no-repeat;
+      transition:
+        border-color 600ms var(--ease-calm),
+        background-size 1200ms var(--ease-calm);
+    }
+    input.field:focus {
+      background-size: 100% 1px;
     }
     .field::placeholder {
       color: rgb(169 163 152 / 0.6);
@@ -250,12 +282,59 @@ type TurnstileWindow = Window & { turnstile?: TurnstileApi };
       border-color: var(--color-line);
       color: var(--color-plaster-muted);
       transition:
-        background-color 600ms var(--ease-calm),
-        color 600ms var(--ease-calm);
+        background-color 900ms var(--ease-calm),
+        color 900ms var(--ease-calm);
     }
     .slot:has(input:checked) {
       background: rgb(176 141 87 / 0.14);
       color: var(--color-plaster);
+    }
+    /* "Send request" ↔ "Sending…": the labels crossfade in place. */
+    .label-stack {
+      display: grid;
+    }
+    .label-stack > span {
+      grid-area: 1 / 1;
+      transition: opacity 900ms var(--ease-calm);
+    }
+    .label-stack > .is-hidden {
+      opacity: 0;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .error {
+        animation: soft-in 900ms var(--ease-calm) both;
+      }
+      .success-in {
+        animation: soft-in 1200ms var(--ease-calm) both;
+      }
+      /* Carried over from "Enquire": one slow bronze outline, after the
+         scroll down has landed. Backwards fill only, so the focus ring is
+         never overridden afterwards. */
+      .field.flash {
+        animation: field-flash 1400ms var(--ease-calm) 700ms backwards;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      input.field,
+      .label-stack > span {
+        transition: none;
+      }
+    }
+    @keyframes soft-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
+    @keyframes field-flash {
+      from {
+        outline: 1px solid var(--color-bronze);
+        outline-offset: 4px;
+      }
+      to {
+        outline: 1px solid transparent;
+        outline-offset: 4px;
+      }
     }
     .slot:has(input:focus-visible) {
       outline: 2px solid var(--color-bronze);
@@ -282,6 +361,7 @@ export class TourForm {
   private turnstileId?: string;
   private readonly serverErrors = signal<Partial<Record<TourField, string>>>({});
   private readonly turnstileEl = viewChild<ElementRef<HTMLElement>>('turnstile');
+  private readonly interestSelect = viewChild<ElementRef<HTMLSelectElement>>('interestSelect');
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
@@ -294,8 +374,14 @@ export class TourForm {
   });
 
   constructor() {
-    // Pre-fill from the membership "Enquire" buttons.
-    effect(() => this.form.controls.interest.setValue(this.enquiry.interest()));
+    // Pre-fill from the membership "Enquire" buttons, and mark the carried-over choice.
+    effect(() => {
+      const interest = this.enquiry.interest();
+      this.form.controls.interest.setValue(interest);
+      if (interest !== 'tour' && typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => this.flashInterest());
+      }
+    });
 
     afterNextRender(() => {
       this.minDate.set(todayIso());
@@ -357,6 +443,15 @@ export class TourForm {
     if (this.turnstileEnabled) {
       afterNextRender(() => this.renderTurnstile(), { injector: this.injector });
     }
+  }
+
+  /** Restartable: drop the class, force a style flush, add it back. */
+  private flashInterest(): void {
+    const el = this.interestSelect()?.nativeElement;
+    if (!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
   }
 
   private focusFirstError(): void {

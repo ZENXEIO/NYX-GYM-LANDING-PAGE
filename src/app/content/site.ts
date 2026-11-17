@@ -3,6 +3,11 @@
  * Image `src` values are base paths produced by `npm run images`
  * (e.g. '/images/hero' → /images/hero-1600.webp). Leave `src` empty
  * to show a labelled placeholder.
+ *
+ * SAMPLE CONTENT (17 Nov 2026): the address, coaches, member quotes and legal
+ * text were written to make the site feel real before launch. They are not
+ * real. Replace them with approved details before going live; member quotes in
+ * particular must come from real members, with their consent (CLAUDE.md §17).
  */
 
 import { environment } from '../../environments/environment';
@@ -29,8 +34,37 @@ export interface Facility {
 export interface Coach {
   name: string;
   speciality: string;
+  /** One sentence, shown under the speciality. */
+  bio: string;
   image: SiteImage;
-  placeholder: boolean;
+}
+
+export interface Testimonial {
+  quote: string;
+  name: string;
+  /** e.g. 'Nocturne member since 2026'. */
+  detail: string;
+}
+
+/** A partner or press logo for the slider under the quotes. */
+export interface Partner {
+  /** Partner name: the logo's alt text. Empty while it is a placeholder. */
+  name: string;
+  /** Path to a one-colour SVG in public/images/partners/. Empty = labelled placeholder. */
+  logo: string;
+}
+
+/** Opening hours as data, in Mumbai time. Minutes from midnight; 1440 = midnight. */
+export interface OpeningSlot {
+  /** 0 = Sunday … 6 = Saturday. */
+  days: number[];
+  opens: number;
+  closes: number;
+}
+
+export interface LegalSection {
+  heading: string;
+  paragraphs: string[];
 }
 
 export type TierId = 'dusk' | 'nocturne' | 'eclipse';
@@ -66,35 +100,46 @@ export const site = {
     close: 'Close',
   },
 
-  /** Phone, email and Instagram come from src/environments/config.ts. PLACEHOLDER: address. */
+  /** Phone, email and Instagram come from src/environments/config.ts. SAMPLE address. */
   contact: {
-    placeholder: true,
-    addressLines: ['Level 12, Placeholder Tower', 'Dr Annie Besant Road', 'Worli, Mumbai 400018'],
+    addressLines: ['Level 3, Sea Crest House', 'Dr Annie Besant Road', 'Worli, Mumbai 400018'],
     area: 'Worli, Mumbai',
     phoneDisplay: environment.contact.phoneDisplay,
     phoneHref: `tel:${environment.contact.phone}`,
     whatsappHref: `https://wa.me/${environment.contact.phone.replace(/\D/g, '')}`,
     email: environment.contact.email,
     instagram: environment.contact.instagram,
-    mapQuery: 'Worli, Mumbai',
+    mapQuery: 'Dr Annie Besant Road, Worli, Mumbai 400018',
   },
 
-  /** PLACEHOLDER hours. */
   hours: [
-    { days: 'Monday to Saturday', time: '5:00 – 24:00' },
-    { days: 'Sunday', time: '7:00 – 21:00' },
+    { days: 'Monday to Saturday', time: '5:00 – 24:00', dayNumbers: [1, 2, 3, 4, 5, 6] },
+    { days: 'Sunday', time: '7:00 – 21:00', dayNumbers: [0] },
   ],
   hoursShort: 'Open until midnight',
+  /** Drives the live "Open now" line in the hero and "Today" in Visit. Keep in step with `hours`. */
+  schedule: [
+    { days: [1, 2, 3, 4, 5, 6], opens: 5 * 60, closes: 24 * 60 },
+    { days: [0], opens: 7 * 60, closes: 21 * 60 },
+  ] satisfies OpeningSlot[],
+  status: {
+    openUntil: 'Open now, until {time}',
+    opensToday: 'Opens today at {time}',
+    opensTomorrow: 'Opens tomorrow at {time}',
+    midnight: 'midnight',
+    today: 'Today',
+  },
 
   hero: {
     lines: ['A quieter', 'kind of', 'strength.'],
-    cta: 'Book a Private Tour',
     image: {
-      src: '',
-      alt: 'The NYX training floor at night, lit low',
+      src: '/images/hero',
+      alt: 'The NYX training floor at night: a loaded barbell lit low in bronze, with the lights of Marine Drive through the window',
       label: 'Hero',
       spec: 'dark-toned, ≥ 2880×1800',
-      focus: '60% 50%',
+      // The barbell's left plate and the rack survive a 375px portrait crop;
+      // the window and city lights come in from 768px.
+      focus: '66% 55%',
     } satisfies SiteImage,
     /** Optional looping video (base path, e.g. '/media/hero' → hero.webm + hero.mp4). */
     video: '',
@@ -110,11 +155,11 @@ export const site = {
     ],
     stat: { value: '150', caption: 'members. Never more.' },
     image: {
-      src: '',
-      alt: 'A member resting between sets in the NYX lounge',
+      src: '/images/club',
+      alt: 'A member resting on a dark oak bench, towel over one shoulder, looking out at the lights of Marine Drive',
       label: 'Club portrait',
       spec: '4:5, ≥ 1600×2000',
-      focus: '50% 30%',
+      focus: '50% 40%',
     } satisfies SiteImage,
     action: { label: 'Explore the facilities', fragment: 'facilities' },
   },
@@ -128,8 +173,8 @@ export const site = {
         name: 'Strength floor',
         lines: ['Racks, platforms and room to move.', 'Nobody waiting on your bench.'],
         image: {
-          src: '',
-          alt: 'Bronze-lit squat racks on the strength floor',
+          src: '/images/strength',
+          alt: 'Two squat racks on basalt platforms on the strength floor, lit low in bronze, with Marine Drive through the window',
           label: 'Strength floor',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -139,8 +184,8 @@ export const site = {
         name: 'Recovery suite',
         lines: ['Cold plunge, compression and massage.', 'The work that makes the work count.'],
         image: {
-          src: '',
-          alt: 'Cold plunge pool in the recovery suite',
+          src: '/images/recovery',
+          alt: 'A still cold-plunge pool set in dark basalt in the recovery suite, beside a window over Marine Drive at night',
           label: 'Recovery suite',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -150,8 +195,8 @@ export const site = {
         name: 'Sauna and steam',
         lines: ['Cedar heat and eucalyptus steam.', 'Ten minutes that settle the whole day.'],
         image: {
-          src: '',
-          alt: 'Cedar-lined sauna with soft amber light',
+          src: '/images/sauna',
+          alt: 'Cedar-lined sauna benches glowing amber from below, with a drift of steam',
           label: 'Sauna and steam',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -161,8 +206,8 @@ export const site = {
         name: 'Pool',
         lines: ['Twenty-five metres, lit low.', 'Swim before the city wakes.'],
         image: {
-          src: '',
-          alt: 'Still lap pool at dawn',
+          src: '/images/pool',
+          alt: 'The lap pool at dawn, lit low, with the sea and the city beyond floor-to-ceiling windows',
           label: 'Pool at dawn',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -175,8 +220,8 @@ export const site = {
           'Mobility, Pilates and conditioning.',
         ],
         image: {
-          src: '',
-          alt: 'Empty studio with a sprung wooden floor',
+          src: '/images/studio',
+          alt: 'The studio at dusk: oak Pilates reformers and mats on a warm wooden floor, the bay beyond the windows',
           label: 'Studio',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -186,8 +231,8 @@ export const site = {
         name: 'Lounge',
         lines: ['Coffee, cold-pressed juice and quiet.', 'Stay as long as you like.'],
         image: {
-          src: '',
-          alt: 'Members’ lounge with low chairs and city views',
+          src: '/images/lounge',
+          alt: 'Leather armchairs and a stone table with juice and coffee in the members’ lounge, Marine Drive lit up below',
           label: 'Lounge',
           spec: '3:2, ≥ 2400×1600',
         },
@@ -208,50 +253,54 @@ export const site = {
       },
     ],
     coachesHeading: 'The coaches',
-    /** PLACEHOLDER coaches — replace names, specialities and photos. */
+    /** SAMPLE coaches, with AI-generated stand-in portraits. Replace both with the real coaches before launch. */
     coaches: [
       {
         name: 'Aarav Mehta',
         speciality: 'Strength and conditioning',
-        placeholder: true,
+        bio: 'Twelve years coaching lifters, from a first deadlift to national meets.',
         image: {
-          src: '',
+          src: '/images/coach-aarav',
           alt: 'Portrait of coach Aarav Mehta',
           label: 'Coach portrait',
           spec: '4:5, ≥ 1200×1500',
+          focus: '50% 30%',
         },
       },
       {
         name: 'Naina Kapoor',
         speciality: 'Pilates and mobility',
-        placeholder: true,
+        bio: 'Trained in London, she believes a good session leaves you taller, not tired.',
         image: {
-          src: '',
+          src: '/images/coach-naina',
           alt: 'Portrait of coach Naina Kapoor',
           label: 'Coach portrait',
           spec: '4:5, ≥ 1200×1500',
+          focus: '50% 30%',
         },
       },
       {
         name: 'Kabir Rao',
         speciality: 'Performance and rehabilitation',
-        placeholder: true,
+        bio: 'A physiotherapist first, he brings athletes and desk-bound backs back to full strength.',
         image: {
-          src: '',
+          src: '/images/coach-kabir',
           alt: 'Portrait of coach Kabir Rao',
           label: 'Coach portrait',
           spec: '4:5, ≥ 1200×1500',
+          focus: '50% 30%',
         },
       },
       {
         name: 'Zoya Iyer',
         speciality: 'Swimming and endurance',
-        placeholder: true,
+        bio: 'A former state swimmer who coaches the dawn lane five days a week.',
         image: {
-          src: '',
+          src: '/images/coach-zoya',
           alt: 'Portrait of coach Zoya Iyer',
           label: 'Coach portrait',
           spec: '4:5, ≥ 1200×1500',
+          focus: '50% 30%',
         },
       },
     ] satisfies Coach[],
@@ -305,8 +354,51 @@ export const site = {
 
   testimonials: {
     heading: 'In their words.',
-    /** Placeholders until real member quotes are supplied. */
-    slots: 2,
+    /** SAMPLE quotes. Replace with real members' words, with their consent, before launch. */
+    quotes: [
+      {
+        quote:
+          'I used to train at six in the morning because it was the only time the gym was empty. Here it is always that quiet.',
+        name: 'Ananya S.',
+        detail: 'Nocturne member since 2026',
+      },
+      {
+        quote:
+          'My coach noticed my shoulder before I did. Six months on, I am lifting more than I did at thirty.',
+        name: 'Rohan M.',
+        detail: 'Eclipse member since 2026',
+      },
+      {
+        quote:
+          'It feels less like a gym and more like a very good hotel that happens to have a squat rack.',
+        name: 'Meera D.',
+        detail: 'Dusk member since 2026',
+      },
+    ] satisfies Testimonial[],
+    /** Pause control for the two sliders (WCAG 2.2.2). */
+    motion: {
+      label: 'Pause the moving quotes and logos',
+      pause: 'Pause',
+      play: 'Play',
+    },
+    quotesLabel: 'Member quotes',
+    partners: {
+      heading: 'Partners and press',
+      placeholder: 'Logo placeholder',
+      spec: 'SVG, one colour',
+      /**
+       * PLACEHOLDERS: supply real partner and press logos (SVG, one colour), with
+       * permission to use them. Never invent brand names: it implies an endorsement.
+       */
+      items: [
+        { name: '', logo: '' },
+        { name: '', logo: '' },
+        { name: '', logo: '' },
+        { name: '', logo: '' },
+        { name: '', logo: '' },
+        { name: '', logo: '' },
+      ] satisfies Partner[],
+    },
   },
 
   visit: {
@@ -354,21 +446,109 @@ export const site = {
 
   footer: {
     tagline: 'A private fitness club in Worli. Open until midnight.',
+    /** Writes itself in once the necklace of lights has closed (scroll-linked). */
+    signOff: 'See you after dark.',
+    /** The card that slides out of the footer when the bronze button is pressed. */
+    invitation: {
+      label: 'Your invitation',
+      open: 'Open your invitation',
+      close: 'Close your invitation',
+      title: 'An evening at NYX',
+      text: 'Come and see the club at the hour you would train. A private tour takes forty minutes, and no one will try to sell you anything.',
+      cta: 'Book a tour',
+      dismiss: 'Close',
+    },
     legal: [
       { label: 'Privacy', path: '/privacy' },
       { label: 'Terms', path: '/terms' },
     ],
   },
 
-  /** PLACEHOLDER legal pages until the client supplies approved text. */
+  /**
+   * SAMPLE legal text, written to match what this site actually does.
+   * Have a lawyer review it before launch.
+   */
   legal: {
     privacy: {
       title: 'Privacy',
       description: 'How NYX collects, uses and protects your personal information.',
+      updated: '17 November 2026',
+      intro:
+        'NYX respects your privacy. This page explains what we collect when you use this website or book a tour, why we collect it and the choices you have. It is written with the Digital Personal Data Protection Act, 2023 in mind.',
+      sections: [
+        {
+          heading: 'What we collect',
+          paragraphs: [
+            'When you book a tour we ask for your name, mobile number, email address, a preferred date and time of day and, if you choose, the membership you are interested in.',
+            'We do not use advertising cookies. Our website analytics count visits without cookies and without identifying you.',
+          ],
+        },
+        {
+          heading: 'Why we use it',
+          paragraphs: [
+            'We use your details only to arrange and confirm your tour, to answer your enquiry and, if you join, to manage your membership. We never sell your information or share it for marketing.',
+          ],
+        },
+        {
+          heading: 'Who else sees it',
+          paragraphs: [
+            'A small number of trusted providers help us run the site: Cloudflare hosts it and protects the form from automated abuse, and our booking system stores tour requests. Each handles your data only on our instructions.',
+            'The map in the Visit section loads from Google only when you choose to show it.',
+          ],
+        },
+        {
+          heading: 'How long we keep it',
+          paragraphs: [
+            'Tour requests are kept for twelve months and then deleted, unless you become a member. Member records are kept for as long as your membership lasts, and afterwards for as long as the law requires.',
+          ],
+        },
+        {
+          heading: 'Your rights',
+          paragraphs: [
+            'You can ask to see, correct or delete the personal information we hold about you, or withdraw your consent at any time. Write to us at the email address in the footer and we will reply within thirty days.',
+          ],
+        },
+      ] satisfies LegalSection[],
     },
     terms: {
       title: 'Terms',
       description: 'The terms that apply to using the NYX website and booking a tour.',
+      updated: '17 November 2026',
+      intro:
+        'These terms apply when you use this website or book a tour of NYX. By using the site you agree to them. Membership itself is covered by a separate agreement, which you receive before you join.',
+      sections: [
+        {
+          heading: 'Booking a tour',
+          paragraphs: [
+            'Tours are free, private and take about forty minutes. A request is confirmed only when we call or message you to agree a time. If you cannot make it, let us know and we will gladly rearrange.',
+            'Tours cover the training floor and the recovery spaces. Comfortable clothes are welcome, but there is no workout.',
+          ],
+        },
+        {
+          heading: 'Membership and fees',
+          paragraphs: [
+            'Fees are shared on enquiry and confirmed in writing before you join. Membership is capped, so a place cannot always be offered straight away.',
+          ],
+        },
+        {
+          heading: 'Using this website',
+          paragraphs: [
+            'Please use the site lawfully and do not try to disrupt it or misuse the booking form. We may change the site, these terms or our opening hours at any time; the version published here is the one that applies.',
+          ],
+        },
+        {
+          heading: 'Content and liability',
+          paragraphs: [
+            'The text, design and photographs on this site belong to NYX. We take care to keep information accurate, but facilities and classes may change. Nothing on this site is medical advice: speak to a doctor before starting a new training programme.',
+          ],
+        },
+        {
+          heading: 'Governing law',
+          paragraphs: [
+            'These terms are governed by the laws of India, and the courts of Mumbai have jurisdiction over any dispute.',
+          ],
+        },
+      ] satisfies LegalSection[],
     },
   },
 

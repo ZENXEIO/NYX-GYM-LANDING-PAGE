@@ -16,7 +16,7 @@ import { Reveal } from '../../../shared/reveal';
         <div class="site-grid mt-14 gap-y-10 md:mt-20">
           @for (m of training.modes; track m.title; let first = $first) {
             <div
-              class="border-hairline col-span-4 border-t pt-6 md:col-span-5"
+              class="border-hairline rule-draw col-span-4 border-t pt-6 md:col-span-5"
               [class]="first ? '' : 'md:col-start-7'"
             >
               <h3 class="text-h3">{{ m.title }}</h3>
@@ -27,12 +27,16 @@ import { Reveal } from '../../../shared/reveal';
 
         <h3 class="text-label text-fg-muted mt-24 md:mt-32">{{ training.coachesHeading }}</h3>
         <ul
-          class="-mx-4 mt-8 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:scroll-px-0 md:grid-cols-4 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
+          class="carousel-focus -mx-4 mt-8 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:scroll-px-0 md:grid-cols-4 md:gap-6 md:overflow-visible md:px-0 md:pb-0"
           aria-label="Coaches"
         >
           @for (c of training.coaches; track c.name; let odd = $odd) {
-            <li class="w-[72%] shrink-0 snap-start md:w-auto" [class]="odd ? 'md:mt-16' : ''">
+            <li
+              class="coach-rise w-[72%] shrink-0 snap-start md:w-auto"
+              [class]="odd ? 'md:mt-16' : ''"
+            >
               <nyx-arch-frame
+                [class.coach-drift]="odd"
                 [image]="c.image"
                 sizes="(min-width: 768px) 22vw, 72vw"
                 [action]="{
@@ -42,10 +46,8 @@ import { Reveal } from '../../../shared/reveal';
                 }"
               />
               <p class="text-h3 mt-6 text-[1.25rem]">{{ c.name }}</p>
-              <p class="text-fg-muted mt-1">{{ c.speciality }}</p>
-              @if (c.placeholder) {
-                <p class="text-label text-accent mt-3">Placeholder coach</p>
-              }
+              <p class="text-label text-accent mt-2">{{ c.speciality }}</p>
+              <p class="text-fg-muted mt-3 max-w-[34ch]">{{ c.bio }}</p>
             </li>
           }
         </ul>
